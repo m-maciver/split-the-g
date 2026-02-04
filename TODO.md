@@ -80,4 +80,4 @@ Then open https://192.168.0.19:8443 on two devices to test.
 - Server runs on port 8443 (HTTPS) with self-signed cert
 - Need to accept security warning on each device
 - QR code displays in terminal for easy mobile access
-- Win streak stored in localStorage key `stg-streak`
+- Player stats stored in localStorage key `stg-stats` (JSON)

@@ -1,6 +1,6 @@
-# Split the G 🍺
+# Split the G
 
-A Pub-Tech betting game where players bet virtual credits that they can drink a pint of Guinness and stop the liquid level exactly in the middle of the 'G' logo.
+A 1v1 competitive Guinness challenge where players race to drink a pint and stop the liquid level exactly at the 'G' logo with the best accuracy.
 
 ## Quick Start
 
@@ -33,25 +33,34 @@ https://192.168.0.19:8443
 
 ## How to Play
 
-1. **STAKE $5** - Place your bet (starting balance: $50)
-2. **CALIBRATE** - Line up the fresh pint's G logo in the crosshair
-3. **DRINK** - 60 seconds to drink and stop at the G
+1. **SNAP** - Photograph your full pint
+2. **MATCH** - Get paired with an opponent 1v1
+3. **DRINK** - 30 seconds to drink and stop at the G
 4. **VERIFY** - Snap a photo to verify your accuracy
-5. **VAR REVIEW** - Watch the reveal!
+5. **REVEAL** - Watch the dramatic score reveal!
 
 ### Scoring
 
-- **97-100%** = GOD TIER (Win $10, net +$5)
-- **90-96%** = ROBBED (Lose $5)
-- **<90%** = SHOCKING (Lose $5)
+Higher accuracy wins the round. Track your stats, build your streak, and climb the ranks!
+
+### Ranks
+
+| Rank | Requirements |
+|------|-------------|
+| Rookie | Less than 3 games played |
+| Bronze | 3+ games, 40%+ win rate |
+| Silver | 5+ games, 65%+ win rate |
+| Gold | 10+ games, 70%+ win rate |
+| Platinum | 20+ games, 75%+ win rate |
 
 ## Technical Details
 
-- **Framework**: React (single-file HTML artifact)
-- **Styling**: Tailwind CSS (inline)
+- **Framework**: React 18 (single-file HTML app)
+- **Styling**: CSS Variables + Inline Styles (Irish Pub theme)
 - **Animation**: Framer Motion
 - **Vision**: HTML5 Canvas pixel analysis
-- **Persistence**: localStorage for balance & high score
+- **Multiplayer**: Socket.IO + WebRTC
+- **Persistence**: localStorage for player stats and records
 
 ## Requirements
 
@@ -81,4 +90,4 @@ https://192.168.0.19:8443
 
 Built with React, Canvas API, and questionable pub logic.
 
-🍺 Drink responsibly. Play irresponsibly.
+Drink responsibly. Split precisely.

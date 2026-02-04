@@ -487,6 +487,28 @@
       return '#EF4444';
     }
 
+    // Player rank based on games played and win rate
+    function getPlayerRank(gamesPlayed, winRate) {
+      if (gamesPlayed < 3) return { name: 'Rookie', color: '#7C9A82', icon: '\u2726' };
+      if (gamesPlayed < 5) return winRate >= 60
+        ? { name: 'Bronze', color: '#CD7F32', icon: '\u2726' }
+        : { name: 'Rookie', color: '#7C9A82', icon: '\u2726' };
+      if (gamesPlayed < 10) return winRate >= 65
+        ? { name: 'Silver', color: '#C0C0C0', icon: '\u2727' }
+        : winRate >= 40
+          ? { name: 'Bronze', color: '#CD7F32', icon: '\u2726' }
+          : { name: 'Rookie', color: '#7C9A82', icon: '\u2726' };
+      if (gamesPlayed < 20) return winRate >= 70
+        ? { name: 'Gold', color: '#D4A843', icon: '\u2605' }
+        : winRate >= 50
+          ? { name: 'Silver', color: '#C0C0C0', icon: '\u2727' }
+          : { name: 'Bronze', color: '#CD7F32', icon: '\u2726' };
+      if (winRate >= 75) return { name: 'Platinum', color: '#34D399', icon: '\u2605' };
+      if (winRate >= 60) return { name: 'Gold', color: '#D4A843', icon: '\u2605' };
+      if (winRate >= 45) return { name: 'Silver', color: '#C0C0C0', icon: '\u2727' };
+      return { name: 'Bronze', color: '#CD7F32', icon: '\u2726' };
+    }
+
     // ============ CUSTOM HOOKS ============
 
     function useSocket() {
@@ -504,22 +526,61 @@
       return { socket, connected };
     }
 
-    function useStreak() {
-      const [streak, setStreak] = useState(() => {
-        try { return parseInt(localStorage.getItem('stg-streak') || '0', 10); } catch (e) { return 0; }
+    function useStats() {
+      const defaultStats = { gamesPlayed: 0, wins: 0, losses: 0, ties: 0, currentStreak: 0, bestStreak: 0, bestAccuracy: 0 };
+
+      const [stats, setStats] = useState(() => {
+        try {
+          const saved = localStorage.getItem('stg-stats');
+          if (saved) return { ...defaultStats, ...JSON.parse(saved) };
+          // Migrate from old keys
+          const migrated = { ...defaultStats };
+          const oldStreak = parseInt(localStorage.getItem('stg-streak') || '0', 10);
+          if (oldStreak > 0) { migrated.currentStreak = oldStreak; migrated.bestStreak = oldStreak; }
+          const legacyHigh = parseInt(localStorage.getItem('split-g-highscore') || '0', 10);
+          const legacyGames = parseInt(localStorage.getItem('split-g-games') || '0', 10);
+          if (legacyHigh > 0) migrated.bestAccuracy = legacyHigh;
+          if (legacyGames > 0) migrated.gamesPlayed = legacyGames;
+          localStorage.removeItem('stg-streak');
+          localStorage.removeItem('split-g-balance');
+          localStorage.removeItem('split-g-highscore');
+          localStorage.removeItem('split-g-games');
+          if (migrated.gamesPlayed > 0 || migrated.currentStreak > 0) {
+            localStorage.setItem('stg-stats', JSON.stringify(migrated));
+          }
+          return migrated;
+        } catch (e) { return defaultStats; }
       });
-      const recordWin = useCallback(() => {
-        setStreak(s => {
-          const n = s + 1;
-          try { localStorage.setItem('stg-streak', String(n)); } catch (e) {}
-          return n;
+
+      const persist = useCallback((s) => {
+        try { localStorage.setItem('stg-stats', JSON.stringify(s)); } catch (e) {}
+      }, []);
+
+      const recordGame = useCallback(({ outcome, accuracy }) => {
+        setStats(prev => {
+          const next = { ...prev, gamesPlayed: prev.gamesPlayed + 1 };
+          if (outcome === 'win') {
+            next.wins = prev.wins + 1;
+            next.currentStreak = prev.currentStreak + 1;
+            if (next.currentStreak > prev.bestStreak) next.bestStreak = next.currentStreak;
+          } else if (outcome === 'loss') {
+            next.losses = prev.losses + 1;
+            next.currentStreak = 0;
+          } else {
+            next.ties = prev.ties + 1;
+          }
+          if (accuracy > prev.bestAccuracy) next.bestAccuracy = accuracy;
+          persist(next);
+          return next;
         });
-      }, []);
-      const resetStreak = useCallback(() => {
-        setStreak(0);
-        try { localStorage.setItem('stg-streak', '0'); } catch (e) {}
-      }, []);
-      return { streak, recordWin, resetStreak };
+      }, [persist]);
+
+      const winRate = useMemo(() => {
+        if (stats.gamesPlayed === 0) return 0;
+        return Math.round((stats.wins / stats.gamesPlayed) * 100);
+      }, [stats.wins, stats.gamesPlayed]);
+
+      return { stats, recordGame, winRate };
     }
 
     function useWebRTC(socket, opponentId, isInitiator) {
@@ -845,9 +906,23 @@
       );
     }
 
+    function StatCard({ label, value, color }) {
+      return (
+        <div className="card-dark" style={{ padding: 12, textAlign: 'center' }}>
+          <p className="t-label" style={{ marginBottom: 4, fontSize: 10 }}>{label}</p>
+          <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "'Space Mono', monospace", fontVariantNumeric: 'tabular-nums', color: color || 'var(--cream)' }}>
+            {value}
+          </div>
+        </div>
+      );
+    }
+
     // ============ SCREEN COMPONENTS ============
 
-    function LandingScreen({ onStart, streak }) {
+    function LandingScreen({ onStart, stats, winRate }) {
+      const rank = getPlayerRank(stats.gamesPlayed, winRate);
+      const hasPlayed = stats.gamesPlayed > 0;
+
       return (
         <motion.div
           key="landing"
@@ -868,20 +943,37 @@
             </h1>
             <div style={{ width: 48, height: 3, background: 'var(--emerald)', borderRadius: 2, margin: '4px auto 0' }} />
             <p style={{ textAlign: 'center', color: 'var(--gold)', fontSize: 14, fontWeight: 600, letterSpacing: '0.05em', marginTop: 8 }}>The Guinness Challenge</p>
-            {streak > 0 && (
+
+            {hasPlayed && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '4px 12px', borderRadius: 100,
-                background: 'rgba(52,211,153,0.1)',
-                border: '1px solid rgba(52,211,153,0.2)',
-                color: '#34D399', fontSize: 12, fontWeight: 700,
-                fontFamily: "'Space Mono', monospace",
-                marginTop: 4
+                padding: '6px 16px', borderRadius: 100,
+                background: rank.color + '15',
+                border: '1px solid ' + rank.color + '33',
+                color: rank.color, fontSize: 13, fontWeight: 700,
+                fontFamily: "'Space Mono', monospace", marginTop: 8
               }}>
-                {streak} WIN STREAK
+                {rank.icon} {rank.name}
               </div>
             )}
-            <div style={{ height: 32 }} />
+
+            {hasPlayed && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%', marginTop: 16 }}>
+                <StatCard label="PLAYED" value={stats.gamesPlayed} />
+                <StatCard label="WIN RATE" value={winRate + '%'} color={winRate >= 50 ? 'var(--emerald)' : 'var(--text-secondary)'} />
+                <StatCard label="STREAK" value={stats.currentStreak} color={stats.currentStreak > 0 ? 'var(--emerald)' : 'var(--text-secondary)'} />
+                <StatCard label="BEST ACC" value={stats.bestAccuracy + '%'} color={getAccuracyColor(stats.bestAccuracy)} />
+              </div>
+            )}
+
+            {hasPlayed && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
+                <span>Best Streak: {stats.bestStreak}</span>
+                <span>{stats.wins}W - {stats.losses}L - {stats.ties}T</span>
+              </div>
+            )}
+
+            <div style={{ height: hasPlayed ? 16 : 32 }} />
             <button className="btn-primary" onClick={onStart}>Get Started</button>
           </div>
         </motion.div>
@@ -988,7 +1080,29 @@
       );
     }
 
-    function SearchingScreen({ onCancel, pintThumbnail }) {
+    function SearchingScreen({ onCancel, onSolo, pintThumbnail }) {
+      const [countdown, setCountdown] = useState(30);
+      const [timedOut, setTimedOut] = useState(false);
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setCountdown(c => {
+            if (c <= 1) {
+              clearInterval(interval);
+              setTimedOut(true);
+              return 0;
+            }
+            return c - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      }, []);
+
+      // Auto-trigger solo mode on timeout
+      useEffect(() => {
+        if (timedOut) onSolo();
+      }, [timedOut, onSolo]);
+
       return (
         <motion.div
           key="searching"
@@ -1008,8 +1122,16 @@
               <SearchRing />
             </div>
             <p style={{ fontSize: 20, fontWeight: 600, color: 'var(--gold)', marginBottom: 8 }}>Looking for an opponent</p>
-            <p className="t-small" style={{ marginBottom: 32 }}>This won't take long</p>
-            <button className="btn-text" onClick={onCancel}>Cancel</button>
+            <p className="t-small" style={{ marginBottom: 8 }}>
+              {countdown > 0 ? 'This won\'t take long' : 'Starting solo mode...'}
+            </p>
+            <p style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Space Mono', monospace", color: 'var(--text-secondary)', marginBottom: 24 }}>
+              {countdown > 0 && `Solo mode in ${countdown}s`}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+              <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={onSolo}>Play Solo Now</button>
+              <button className="btn-text" onClick={onCancel}>Cancel</button>
+            </div>
           </div>
         </motion.div>
       );
@@ -1104,7 +1226,7 @@
       );
     }
 
-    function CountdownScreen({ gameStartTime, remoteStream, onDone }) {
+    function CountdownScreen({ gameStartTime, remoteStream, onDone, soloMode }) {
       const [phase, setPhase] = useState('pre'); // 'pre' | 'timer'
       const [preNum, setPreNum] = useState(3);
       const [timer, setTimer] = useState(30);
@@ -1204,14 +1326,16 @@
           style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', position: 'relative' }}
           className="safe-top safe-bottom">
 
-          {/* PIP opponent */}
-          <div className="pip-video">
-            {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PulsingDots light />
-              </div>
-            )}
-          </div>
+          {/* PIP opponent (hidden in solo mode) */}
+          {!soloMode && (
+            <div className="pip-video">
+              {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PulsingDots light />
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <p className="t-label" style={{ marginBottom: 16 }}>TIME REMAINING</p>
@@ -1273,7 +1397,7 @@
       );
     }
 
-    function RevealScreen({ revealData, playerId, onRematch, onNewOpponent, rematchRequested, rematchPending, onAcceptRematch, onDeclineRematch }) {
+    function RevealScreen({ revealData, playerId, onRematch, onNewOpponent, rematchRequested, rematchPending, onAcceptRematch, onDeclineRematch, stats, winRate }) {
       const [phase, setPhase] = useState(0);
       const [showConfetti, setShowConfetti] = useState(false);
 
@@ -1283,9 +1407,10 @@
       const opId = playerId === player1Id ? player2Id : player1Id;
       const myResult = results[playerId];
       const opResult = results[opId];
+      const rank = getPlayerRank(stats.gamesPlayed, winRate);
 
       useEffect(() => {
-        const timings = [0, 1000, 2500, 4000, 5500, 7000];
+        const timings = [0, 1000, 2500, 4000, 5500, 7000, 8500];
         const timers = timings.map((delay, i) => setTimeout(() => setPhase(i), delay));
         const confettiTimer = setTimeout(() => {
           if (winnerId === playerId) {
@@ -1307,10 +1432,10 @@
 
       const handleShare = useCallback(async () => {
         const text = isWinner
-          ? `I won Split the G with ${myResult.accuracy}% accuracy!`
-          : `I scored ${myResult.accuracy}% on Split the G!`;
+          ? `I won Split the G with ${myResult.accuracy}% accuracy! (${rank.name} rank)`
+          : `I scored ${myResult.accuracy}% on Split the G! (${rank.name} rank)`;
         try { await navigator.share({ title: 'Split the G', text }); } catch (e) {}
-      }, [isWinner, myResult]);
+      }, [isWinner, myResult, rank]);
 
       return (
         <motion.div key="reveal"
@@ -1424,8 +1549,50 @@
               </motion.div>
             )}
 
+            {/* Phase 6: Stats update card */}
+            {phase >= 6 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={springConfig}
+                className="card-dark" style={{ padding: 16 }}>
+                <p className="t-label" style={{ marginBottom: 12, textAlign: 'center' }}>YOUR RECORD</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>W-L-T</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: 'var(--cream)' }}>
+                      {stats.wins}-{stats.losses}-{stats.ties}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>WIN RATE</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: winRate >= 50 ? 'var(--emerald)' : 'var(--text-secondary)' }}>
+                      {winRate}%
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>STREAK</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: stats.currentStreak > 0 ? 'var(--emerald)' : 'var(--text-secondary)' }}>
+                      {stats.currentStreak}
+                    </div>
+                  </div>
+                </div>
+                {myResult.accuracy >= stats.bestAccuracy && myResult.accuracy > 0 && (
+                  <div style={{ marginTop: 12, textAlign: 'center', padding: '6px 12px', background: 'rgba(212,168,67,0.1)', borderRadius: 8, color: 'var(--gold)', fontSize: 12, fontWeight: 700 }}>
+                    NEW PERSONAL BEST: {myResult.accuracy}%
+                  </div>
+                )}
+                {stats.currentStreak > 1 && stats.currentStreak === stats.bestStreak && isWinner && (
+                  <div style={{ marginTop: 8, textAlign: 'center', padding: '6px 12px', background: 'rgba(52,211,153,0.1)', borderRadius: 8, color: 'var(--emerald)', fontSize: 12, fontWeight: 700 }}>
+                    NEW BEST STREAK: {stats.bestStreak}
+                  </div>
+                )}
+                <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: rank.color, fontWeight: 600 }}>
+                  {rank.icon} {rank.name} Rank
+                </div>
+              </motion.div>
+            )}
+
             {/* Post-game actions */}
-            {phase >= 5 && (
+            {phase >= 6 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={springConfig}
                 style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
@@ -1460,12 +1627,147 @@
       );
     }
 
+    function SoloRevealScreen({ accuracy, resultImage, onPlayAgain, onHome, stats, winRate }) {
+      const [phase, setPhase] = useState(0);
+      const [showConfetti, setShowConfetti] = useState(false);
+      const rank = getPlayerRank(stats.gamesPlayed, winRate);
+      const isGood = accuracy >= 50;
+
+      useEffect(() => {
+        const timings = [0, 1500, 3000, 4500];
+        const timers = timings.map((delay, i) => setTimeout(() => setPhase(i), delay));
+        if (accuracy >= 80) {
+          const confettiTimer = setTimeout(() => {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 2500);
+          }, 3500);
+          timers.push(confettiTimer);
+        }
+        return () => timers.forEach(clearTimeout);
+      }, [accuracy]);
+
+      useEffect(() => {
+        if (phase === 2) {
+          haptic([100, 50, 100]);
+          if (isGood) sfx.win(); else sfx.lose();
+        }
+      }, [phase]);
+
+      const handleShare = useCallback(async () => {
+        const text = `I scored ${accuracy}% on Split the G! (${rank.name} rank)`;
+        try { await navigator.share({ title: 'Split the G', text }); } catch (e) {}
+      }, [accuracy, rank]);
+
+      const tierLabel = accuracy >= 97 ? 'GUINNESS GOD' : accuracy >= 80 ? 'Excellent' : accuracy >= 50 ? 'Decent Split' : accuracy >= 25 ? 'Needs Work' : 'Shocking';
+      const tierColor = getAccuracyColor(accuracy);
+
+      return (
+        <motion.div key="solo-reveal"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', position: 'relative' }}
+          className="safe-top safe-bottom">
+
+          {showConfetti && <ConfettiBurst />}
+
+          {phase >= 2 && isGood && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.8, 0, 0.5, 0] }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+              style={{ position: 'fixed', inset: 0, background: 'radial-gradient(circle at center, rgba(52,211,153,0.12) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+          )}
+
+          <div className="layout" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16, position: 'relative', zIndex: 1 }}>
+
+            {phase >= 0 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={springConfig}
+                style={{ textAlign: 'center', marginBottom: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SOLO CHALLENGE</p>
+              </motion.div>
+            )}
+
+            {phase >= 1 && (
+              <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={springConfig}
+                className="card-dark">
+                {resultImage && (
+                  <div style={{ marginBottom: 12 }}>
+                    <img src={resultImage} alt="Your result" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 12 }} />
+                  </div>
+                )}
+                <div style={{ textAlign: 'center' }}>
+                  <p className="t-label" style={{ marginBottom: 8 }}>YOUR ACCURACY</p>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={springConfig}
+                    style={{ fontSize: 48, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: tierColor }}>
+                    <RollingNumber value={accuracy} />%
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+
+            {phase >= 2 && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 1.1, 1] }} transition={{ duration: 0.5 }}
+                style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ fontSize: 24, fontWeight: 900, color: tierColor, marginBottom: 4 }}>
+                  {tierLabel}
+                </div>
+              </motion.div>
+            )}
+
+            {phase >= 3 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={springConfig}
+                className="card-dark" style={{ padding: 16 }}>
+                <p className="t-label" style={{ marginBottom: 12, textAlign: 'center' }}>YOUR RECORD</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>W-L-T</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: 'var(--cream)' }}>
+                      {stats.wins}-{stats.losses}-{stats.ties}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>WIN RATE</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: winRate >= 50 ? 'var(--emerald)' : 'var(--text-secondary)' }}>
+                      {winRate}%
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>BEST ACC</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: getAccuracyColor(stats.bestAccuracy) }}>
+                      {stats.bestAccuracy}%
+                    </div>
+                  </div>
+                </div>
+                {accuracy >= stats.bestAccuracy && accuracy > 0 && (
+                  <div style={{ marginTop: 12, textAlign: 'center', padding: '6px 12px', background: 'rgba(212,168,67,0.1)', borderRadius: 8, color: 'var(--gold)', fontSize: 12, fontWeight: 700 }}>
+                    NEW PERSONAL BEST: {accuracy}%
+                  </div>
+                )}
+                <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: rank.color, fontWeight: 600 }}>
+                  {rank.icon} {rank.name} Rank
+                </div>
+              </motion.div>
+            )}
+
+            {phase >= 3 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={springConfig}
+                style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                <button className="btn-primary" onClick={onPlayAgain}>Play Again</button>
+                <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={onHome}>Home</button>
+                {typeof navigator.share === 'function' && (
+                  <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={handleShare}>Share Result</button>
+                )}
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      );
+    }
+
     // ============ MAIN APP ============
 
     function App() {
       const { socket, connected } = useSocket();
       const [screen, setScreen] = useState('landing');
-      const { streak, recordWin, resetStreak } = useStreak();
+      const { stats, recordGame, winRate } = useStats();
 
       // Room/match state
       const [roomId, setRoomId] = useState(null);
@@ -1492,6 +1794,9 @@
       const [capturedResultImage, setCapturedResultImage] = useState(null);
       const [isScanning, setIsScanning] = useState(false);
 
+      // Solo mode
+      const [soloMode, setSoloMode] = useState(false);
+
       // Rematch
       const [rematchRequested, setRematchRequested] = useState(false);
       const [rematchPending, setRematchPending] = useState(false);
@@ -1514,13 +1819,16 @@
         setTimeout(() => setToastVisible(false), 3000);
       }, []);
 
-      // Track streak on reveal
+      // Track stats on reveal
       useEffect(() => {
         if (revealData && playerId) {
-          if (revealData.winnerId === playerId) recordWin();
-          else if (revealData.winnerId !== null) resetStreak();
+          const myRes = revealData.results[playerId];
+          const accuracy = myRes ? myRes.accuracy : 0;
+          if (revealData.winnerId === playerId) recordGame({ outcome: 'win', accuracy });
+          else if (revealData.winnerId === null) recordGame({ outcome: 'tie', accuracy });
+          else recordGame({ outcome: 'loss', accuracy });
         }
-      }, [revealData, playerId, recordWin, resetStreak]);
+      }, [revealData, playerId, recordGame]);
 
       // ---- Socket events ----
       useEffect(() => {
@@ -1640,10 +1948,19 @@
         setCapturedResultImage(null);
         setIsScanning(false);
         setPintImage(null);
+        setSoloMode(false);
         setScreen('landing');
       }, [socket, webrtc]);
 
       const handleGetStarted = () => setScreen('capture-pint');
+
+      const handleSoloMode = useCallback(() => {
+        if (socket) socket.emit('leave-queue');
+        setSoloMode(true);
+        setGameStartTime(Date.now() + 3000);
+        setScreen('countdown');
+        showToast('Solo mode activated', 'info');
+      }, [socket, showToast]);
 
       const handlePintCaptured = (img) => {
         setPintImage(img);
@@ -1679,8 +1996,16 @@
           const analysis = await analyze(img, canvas);
           setIsScanning(false);
           setMyResult({ ...analysis, image: img });
-          if (socket) socket.emit('submit-result', { image: img, accuracy: analysis.accuracy });
-          setScreen('waiting');
+
+          if (soloMode) {
+            // Solo: track stats and go straight to solo reveal
+            const outcome = analysis.accuracy >= 50 ? 'win' : 'loss';
+            recordGame({ outcome, accuracy: analysis.accuracy });
+            setScreen('solo-reveal');
+          } else {
+            if (socket) socket.emit('submit-result', { image: img, accuracy: analysis.accuracy });
+            setScreen('waiting');
+          }
         }, 1800);
       };
 
@@ -1705,6 +2030,23 @@
         }, 100);
       };
 
+      const handleSoloPlayAgain = () => {
+        setMyResult(null);
+        setCapturedResultImage(null);
+        setIsScanning(false);
+        setGameStartTime(Date.now() + 3000);
+        setScreen('countdown');
+      };
+
+      const handleSoloHome = () => {
+        setSoloMode(false);
+        setMyResult(null);
+        setCapturedResultImage(null);
+        setIsScanning(false);
+        setPintImage(null);
+        setScreen('landing');
+      };
+
       return (
         <div style={{ minHeight: '100vh' }}>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -1712,7 +2054,7 @@
 
           <AnimatePresence mode="wait">
             {screen === 'landing' && (
-              <LandingScreen key="landing" onStart={handleGetStarted} streak={streak} />
+              <LandingScreen key="landing" onStart={handleGetStarted} stats={stats} winRate={winRate} />
             )}
 
             {screen === 'capture-pint' && (
@@ -1720,7 +2062,7 @@
             )}
 
             {screen === 'searching' && (
-              <SearchingScreen key="searching" onCancel={handleCancelSearch} pintThumbnail={pintImage} />
+              <SearchingScreen key="searching" onCancel={handleCancelSearch} onSolo={handleSoloMode} pintThumbnail={pintImage} />
             )}
 
             {screen === 'matched' && (
@@ -1743,7 +2085,8 @@
               <CountdownScreen key="countdown"
                 gameStartTime={gameStartTime}
                 remoteStream={webrtc.remoteStream}
-                onDone={handleDrinkingDone} />
+                onDone={handleDrinkingDone}
+                soloMode={soloMode} />
             )}
 
             {screen === 'capture-result' && (
@@ -1770,7 +2113,19 @@
                 rematchRequested={rematchRequested}
                 rematchPending={rematchPending}
                 onAcceptRematch={handleAcceptRematch}
-                onDeclineRematch={handleDeclineRematch} />
+                onDeclineRematch={handleDeclineRematch}
+                stats={stats}
+                winRate={winRate} />
+            )}
+
+            {screen === 'solo-reveal' && myResult && (
+              <SoloRevealScreen key="solo-reveal"
+                accuracy={myResult.accuracy}
+                resultImage={myResult.image}
+                onPlayAgain={handleSoloPlayAgain}
+                onHome={handleSoloHome}
+                stats={stats}
+                winRate={winRate} />
             )}
           </AnimatePresence>
         </div>

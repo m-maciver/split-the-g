@@ -1,145 +1,129 @@
-# Split the G - Final Production Candidate
+# Split the G - Production Guide
 
-## 🎯 What's New: Silicon Valley Quality
+## What's New: 1v1 Multiplayer with Stats
 
-This is the **final production-ready version** of Split the G, redesigned with premium Silicon Valley quality and robustness.
+The **multiplayer production version** of Split the G — 1v1 competitive Guinness challenge with player stats, ranks, and streak tracking.
 
 ---
 
-## ✨ Key Features Implemented
+## Key Features
 
-### 🎨 Design System: "Silicon Valley Pub"
+### Design System: "Irish Pub meets Silicon Valley"
 
 - **Dark Mode Premium Aesthetic**
-  - Matte Black background (#050505)
-  - Guinness Cream accents (#F0EAD6)
-  - Metallic Gold highlights (#FFD700)
-  - Success Green (#00E054)
+  - Matte Black background (#0B1A0E)
+  - Guinness Cream accents (#F5E6C8)
+  - Gold highlights (#D4A843)
+  - Emerald success (#34D399)
 
 - **Glassmorphism Throughout**
   - All cards use `backdrop-filter: blur(10px)`
-  - Subtle white borders at 10% opacity
-  - Beautiful translucent overlays
+  - Subtle borders at low opacity
+  - Translucent overlays
 
-- **Typography: DM Sans**
-  - Clean, geometric, modern Google Font
-  - Bold tracking for headers
-  - Perfect mobile readability
+- **Typography**
+  - DM Sans for labels and body text
+  - Space Mono for numeric data (stats, accuracy, timers)
 
 - **Smooth Animations**
-  - Framer Motion page transitions (slide up/down)
-  - Button press feedback (scale down)
-  - Breathing pint glass animation
-  - Laser scan effect
+  - Framer Motion page transitions
+  - Button press feedback
   - Rolling number counters
+  - Confetti burst on wins
 
-### 🏠 Home Screen (Gamified & Clear)
+### Home Screen (Stats & Gamification)
 
-- **Gold "SPLIT THE G" Header** with tracking and gradient
-- **Horizontal Scrolling Instruction Cards**:
-  - Card 1: "Stake €5 to Play"
-  - Card 2: "Snap → Drink → Snap"
-  - Card 3: "97% = Double Money"
-- **Animated CSS Pint Glass** breathing effect as hero
-- **Premium Gold Button** with radial shine on press
+- **Rank Badge** — Rookie / Bronze / Silver / Gold / Platinum
+- **Stats Grid** — Games Played, Win Rate, Current Streak, Best Accuracy
+- **Records Row** — Best Streak and W-L-T record
+- **Clean first-time experience** — Stats only show after first game
 
-### 📷 Camera System (Robust & Beautiful)
+### 1v1 Multiplayer
 
-- **Forced Back Camera** (`facingMode: 'environment'`)
-- **Full Viewport Coverage** (no letterboxing)
-- **Beautiful Error Handling**:
-  - Elegant "Camera Access Needed" screen
-  - Pulsing camera icon
-  - Clear retry button
-- **Silicon Valley Viewfinder**:
-  - Rounded corner brackets
-  - Precision crosshair
-  - Target line indicator
-  - Professional overlay instructions
+- **Real-time matchmaking** via Socket.IO
+- **WebRTC video** — see your opponent live
+- **Ready-up system** — both players confirm before countdown
+- **Rematch support** — quick rematches without re-queuing
 
-### 🔬 Enhanced Pixel Vision
+### Camera System
 
-- **Image Quality Detection**:
-  - Checks average brightness to prevent dark/blurry images
-  - Shows "Retake" alert if image too dark
-  - Returns to camera instead of giving 0% score
-- **Center Column Pixel Analysis** (unchanged core logic)
-- **Adaptive Scoring** with 15% height tolerance
+- **Back camera** (`facingMode: 'environment'`) for pint capture
+- **Full viewport coverage** (no letterboxing)
+- **Viewfinder** with gold corner brackets and emerald guide line
+- **Camera flash** effect on capture
 
-### 🎬 The Reveal (The "Juice")
+### The Reveal
 
-- **Laser Scan Animation** - Green line scanning the photo
-- **Clear Visualization**:
-  - Target Line (Green) at 50%
-  - Your Liquid Line (Green for win, Red for loss)
-  - Glassmorphic labels ("TARGET", "YOU")
-- **Rolling Number Counter** - Animates from 0 to score
-- **Tiered Results**:
-  - **97%+**: "GUINNESS GOD" (Gold, Confetti)
-  - **90-96%**: "ROBBED" (Silver, Sparkles)
-  - **<90%**: "SHOCKING" (Red, Screen Shake)
+- **6-phase dramatic reveal** — opponent score, your score, winner announcement, stats update
+- **Sound effects** — countdown tick, shutter, win/lose
+- **Haptic feedback** — on capture, countdown, and reveal
+- **Personal best callouts** — "NEW PERSONAL BEST" and "NEW BEST STREAK" alerts
+- **Confetti burst** on wins
 
-### 📱 PWA Support
+### PWA Support
 
 - **Installable** on iOS and Android
 - **Manifest.json** with app icons
-- **Standalone mode** - runs like native app
-- **Portrait orientation lock**
-- **Theme color**: #050505 (matte black)
+- **Standalone mode** — runs like native app
+- **Portrait orientation**
 
 ---
 
-## 🚀 Deployment Options
+## Scoring System
 
-### Option 1: Netlify Drop (Fastest - Recommended for Beta)
+| Accuracy | Rating | Color |
+|----------|--------|-------|
+| 80-100% | Excellent | Emerald |
+| 50-79% | Good | Gold |
+| 25-49% | Fair | Orange |
+| 0-24% | Needs Work | Red |
+
+### Rank Tiers
+
+| Rank | Requirements |
+|------|-------------|
+| Rookie | Less than 3 games played |
+| Bronze | 3+ games, 40%+ win rate |
+| Silver | 5+ games, 65%+ win rate |
+| Gold | 10+ games, 70%+ win rate |
+| Platinum | 20+ games, 75%+ win rate |
+
+---
+
+## Deployment Options
+
+### Option 1: Netlify Drop (Fastest)
 
 1. Go to [drop.netlify.com](https://drop.netlify.com)
 2. Drag `index.html` into the browser
-3. Get instant public URL: `https://split-the-g-xyz.netlify.app`
+3. Get instant public URL
 4. Share with friends!
 
-**Note**: For PWA features, you need to deploy both `index.html` AND `manifest.json`. Use Option 2 or 3 for full PWA support.
+**Note**: For full PWA support, deploy both `index.html` and `manifest.json` using Option 2 or 3.
 
 ### Option 2: Netlify CLI (Full PWA Support)
 
 ```bash
-# Install Netlify CLI
 npm install -g netlify-cli
-
-# Deploy from project directory
 netlify deploy --prod
-
-# Follow prompts, select "Create new site"
-# Set publish directory to current directory (.)
 ```
 
-### Option 3: Vercel (Full PWA Support)
+### Option 3: Vercel
 
 ```bash
-# Install Vercel CLI
 npm install -g vercel
-
-# Deploy
 vercel --prod
-
-# Follow prompts
 ```
 
-### Option 4: GitHub Pages (Permanent Hosting)
+### Option 4: GitHub Pages
 
-1. Create new GitHub repository
-2. Upload all files:
-   - `index.html`
-   - `manifest.json`
-3. Go to Settings → Pages
-4. Select main branch → Save
-5. Your app: `https://yourusername.github.io/split-the-g`
+1. Upload `index.html` and `manifest.json` to a GitHub repository
+2. Go to Settings > Pages
+3. Select main branch > Save
 
 ---
 
-## 🧪 Local Testing
-
-### Start Local Server
+## Local Testing
 
 ```bash
 npm start
@@ -151,29 +135,22 @@ Server runs on:
 
 **QR Code** displays in terminal for easy mobile access.
 
-### Accept Certificate on Mobile
-
-1. Scan QR code or visit URL
-2. Tap "Advanced" or "Show Details"
-3. Tap "Proceed" or "Accept Risk"
-4. Allow camera access when prompted
-
 ---
 
-## 📊 Technical Specifications
+## Technical Specifications
 
 ### Performance
 
 - **Page Load**: < 2 seconds on 3G
-- **Animations**: Smooth 60fps
+- **Animations**: 60fps
 - **Bundle Size**: ~150KB (CDN libraries cached)
 
 ### Browser Support
 
-- ✅ iOS Safari 14+
-- ✅ Chrome for Android 90+
-- ✅ Samsung Internet 14+
-- ✅ Firefox Mobile 90+
+- iOS Safari 14+
+- Chrome for Android 90+
+- Samsung Internet 14+
+- Firefox Mobile 90+
 
 ### Camera Requirements
 
@@ -185,110 +162,64 @@ Server runs on:
 ### Data Persistence
 
 Stored in `localStorage`:
-- `split-g-balance` - Current balance (default: €50.00)
-- `split-g-highscore` - Best accuracy % (default: 0)
-- `split-g-games` - Games played count (default: 0)
+- `stg-stats` — Player statistics JSON (games, wins, losses, ties, streaks, best accuracy)
+
+No accounts or sign-ins required. All data stays in the browser.
 
 ---
 
-## 🎮 Game Flow
+## Game Flow
 
 ```
-HOME
-  ↓
-CALIBRATE (Snap fresh pint)
-  ↓
-DRINK (60 second timer)
-  ↓
-VERIFY (Snap result)
-  ↓
-LASER SCAN (2 seconds)
-  ↓
-RESULT (Score reveal + animations)
-  ↓
+HOME (Stats + Rank)
+  |
+SNAP (Photograph full pint)
+  |
+MATCH (1v1 matchmaking)
+  |
+READY (Both players ready up)
+  |
+DRINK (30 second timer)
+  |
+VERIFY (Snap result photo)
+  |
+REVEAL (6-phase score reveal + stats update)
+  |
 HOME
 ```
 
 ---
 
-## 🎯 Scoring System
+## Files
 
-| Accuracy | Verdict | Payout | Effect |
-|----------|---------|--------|--------|
-| 97-100% | GUINNESS GOD | +€10 (net +€5) | Gold confetti |
-| 90-96% | ROBBED | €0 (net -€5) | Silver sparkles |
-| 0-89% | SHOCKING | €0 (net -€5) | Screen shake |
-
----
-
-## 🛠️ Files Included
-
-- `split-the-g.html` - Main application (production ready)
-- `index.html` - Deployment copy (same as above)
-- `manifest.json` - PWA manifest
-- `server.js` - Local HTTPS server
-- `package.json` - Node dependencies
-- `cert.pem` / `key.pem` - SSL certificates (local only)
-- `README.md` - User guide
-- `PRODUCTION-GUIDE.md` - This file
-- `DEPLOY.md` - Deployment instructions
+- `index.html` — Main application (1v1 multiplayer)
+- `manifest.json` — PWA manifest
+- `server.js` — Node.js server (matchmaking + WebRTC signaling)
+- `package.json` — Node dependencies
+- `README.md` — User guide
+- `PRODUCTION-GUIDE.md` — This file
+- `DEPLOY.md` — Deployment options
 
 ---
 
-## 🎨 Color Reference
+## Color Reference
 
 ```css
---matte-black: #050505;  /* Background */
---cream: #F0EAD6;        /* Text */
---gold: #FFD700;         /* Accents, Buttons */
---success: #00E054;      /* Win state, Target line */
---silver: #C0C0C0;       /* Robbed state */
---red: #FF4444;          /* Loss state */
+--bg-primary: #0B1A0E;    /* Background */
+--bg-elevated: #132A18;   /* Elevated surfaces */
+--bg-surface: #1A3520;    /* Cards */
+--cream: #F5E6C8;         /* Primary text */
+--gold: #D4A843;          /* Accents, buttons */
+--emerald: #34D399;       /* Win state, success */
+--text-secondary: #7C9A82; /* Secondary text */
+--accent-red: #EF4444;    /* Loss state */
 ```
 
 ---
 
-## ✅ Quality Checklist
+## Known Limitations
 
-- ✅ Dark mode premium design system
-- ✅ Glassmorphism throughout
-- ✅ DM Sans typography
-- ✅ Smooth framer-motion animations
-- ✅ Horizontal scroll instruction cards
-- ✅ Breathing pint glass animation
-- ✅ Premium gold button with shine
-- ✅ Forced back camera
-- ✅ Beautiful error handling
-- ✅ Silicon Valley viewfinder
-- ✅ Image quality detection
-- ✅ Laser scan animation
-- ✅ Clear target/liquid visualization
-- ✅ Rolling number counters
-- ✅ Tiered results (God/Robbed/Shocking)
-- ✅ Gold confetti (97%+)
-- ✅ Silver sparkles (90-96%)
-- ✅ Screen shake (<90%)
-- ✅ PWA manifest
-- ✅ Mobile-optimized
-- ✅ Safe area support
-- ✅ Responsive design
-- ✅ localStorage persistence
-
----
-
-## 🚨 Known Limitations
-
-- **Camera access required** - Won't work without camera permissions
-- **HTTPS required** - Browsers require secure context for camera
-- **Self-signed cert warnings** - Local server shows security warnings (safe to proceed)
-- **No backend** - All data stored locally (balance resets if localStorage cleared)
-
----
-
-## 🎉 Ready for Production!
-
-This is the **final production candidate**. All requested features implemented with Silicon Valley quality polish.
-
-Deploy to Netlify/Vercel for public beta testing with friends!
-
-**Questions or issues?** Check the troubleshooting section in `README.md` or review the code comments.
+- **Camera access required** — Won't work without camera permissions
+- **HTTPS required** — Browsers require secure context for camera
+- **Self-signed cert warnings** — Local server shows security warnings (safe to proceed)
+- **No accounts** — All stats stored in localStorage (resets if browser data cleared)
