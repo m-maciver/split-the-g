@@ -589,6 +589,7 @@
       const [remoteStream, setRemoteStream] = useState(null);
       const [localStream, setLocalStream] = useState(null);
       const [connectionState, setConnectionState] = useState('new');
+      const [error, setError] = useState(null); // null | 'camera' | 'connection'
 
       const cleanup = useCallback(() => {
         if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
@@ -599,10 +600,12 @@
         setLocalStream(null);
         setRemoteStream(null);
         setConnectionState('new');
+        setError(null);
       }, []);
 
       const start = useCallback(async () => {
         if (!socket || !opponentId) return;
+        setError(null);
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -624,7 +627,10 @@
             if (e.candidate) socket.emit('webrtc-ice-candidate', { candidate: e.candidate });
           };
           pc.onconnectionstatechange = () => {
-            if (pc.connectionState) setConnectionState(pc.connectionState);
+            if (pc.connectionState) {
+              setConnectionState(pc.connectionState);
+              if (pc.connectionState === 'failed') setError('connection');
+            }
           };
 
           if (isInitiator) {
@@ -634,8 +640,14 @@
           }
         } catch (err) {
           setConnectionState('failed');
+          setError('camera');
         }
       }, [socket, opponentId, isInitiator]);
+
+      const retry = useCallback(() => {
+        cleanup();
+        setTimeout(() => start(), 500);
+      }, [cleanup, start]);
 
       useEffect(() => {
         if (!socket) return;
@@ -667,7 +679,7 @@
         };
       }, [socket]);
 
-      return { localStream, remoteStream, connectionState, start, cleanup };
+      return { localStream, remoteStream, connectionState, error, start, cleanup, retry };
     }
 
     function useCamera(facingMode = 'environment') {
@@ -826,6 +838,48 @@
               className={`toast ${type === 'error' ? 'toast-error' : ''}`}
             >
               <div className="toast-inner">{message}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      );
+    }
+
+    function ConnectionBanner({ connected }) {
+      return (
+        <AnimatePresence>
+          {!connected && (
+            <motion.div
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              transition={springConfig}
+              style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0,
+                zIndex: 45,
+                display: 'flex', justifyContent: 'center',
+                padding: 'max(env(safe-area-inset-top), 16px) 24px 12px',
+              }}>
+              <div style={{
+                background: 'rgba(239,68,68,0.15)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                color: 'var(--accent-red)',
+                padding: '12px 24px',
+                borderRadius: 14,
+                fontSize: 14,
+                fontWeight: 600,
+                border: '1px solid rgba(239,68,68,0.25)',
+                maxWidth: 400,
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+              }}>
+                Reconnecting...
+                <PulsingDots />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1040,9 +1094,11 @@
 
           {camera.error ? (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--cream)', padding: 24, textAlign: 'center' }}>
-              <div>
-                <p className="t-title" style={{ color: 'var(--cream)', marginBottom: 12 }}>Camera Access Needed</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <p className="t-title" style={{ color: 'var(--cream)', marginBottom: 4 }}>Camera Access Needed</p>
                 <p className="t-small">Allow camera access to continue</p>
+                <button className="btn-primary" style={{ width: 200 }} onClick={() => camera.start()}>Try Again</button>
+                {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={onCancel}>Go Back</button>}
               </div>
             </div>
           ) : (
@@ -1137,12 +1193,30 @@
       );
     }
 
-    function MatchedScreen({ localStream, remoteStream, onReady }) {
+    function MatchedScreen({ localStream, remoteStream, onReady, connectionState, webrtcError, onRetryWebRTC }) {
       const [toastVisible, setToastVisible] = useState(true);
+      const [timedOut, setTimedOut] = useState(false);
+
       useEffect(() => {
         const t = setTimeout(() => setToastVisible(false), 3000);
         return () => clearTimeout(t);
       }, []);
+
+      // 15s timeout for remote stream
+      useEffect(() => {
+        if (remoteStream) { setTimedOut(false); return; }
+        const t = setTimeout(() => setTimedOut(true), 15000);
+        return () => clearTimeout(t);
+      }, [remoteStream]);
+
+      const hasFailed = webrtcError || connectionState === 'failed' || timedOut;
+      const errorMessage = webrtcError === 'camera'
+        ? 'Camera access was denied. Please allow camera permissions.'
+        : webrtcError === 'connection'
+          ? 'Video connection failed. Try again.'
+          : timedOut
+            ? 'Connection timed out. Opponent may have lost connection.'
+            : null;
 
       return (
         <motion.div
@@ -1158,15 +1232,26 @@
           <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gap: 8, padding: '8px 8px 0' }}>
             <div className="video-container">
               {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200 }}>
-                  <PulsingDots light />
+                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200, gap: 12, padding: 24, textAlign: 'center' }}>
+                  {hasFailed ? (
+                    <>
+                      <p style={{ color: 'var(--accent-red)', fontSize: 14, fontWeight: 600 }}>{errorMessage}</p>
+                      <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={onRetryWebRTC}>Retry</button>
+                    </>
+                  ) : (
+                    <>
+                      <PulsingDots light />
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Connecting video...</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
             <div className="video-container">
               {localStream ? <VideoFeed stream={localStream} muted mirrored /> : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200 }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200, gap: 12 }}>
                   <PulsingDots light />
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Starting camera...</p>
                 </div>
               )}
             </div>
@@ -1362,6 +1447,24 @@
     }
 
     function WaitingScreen({ accuracy, resultImage, remoteStream, opponentSubmitted }) {
+      const [countdown, setCountdown] = useState(90);
+
+      useEffect(() => {
+        if (opponentSubmitted) return;
+        const interval = setInterval(() => {
+          setCountdown(c => {
+            if (c <= 1) { clearInterval(interval); return 0; }
+            return c - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [opponentSubmitted]);
+
+      const progress = countdown / 90;
+      const ringRadius = 22;
+      const ringCircumference = 2 * Math.PI * ringRadius;
+      const ringOffset = ringCircumference * (1 - progress);
+
       return (
         <motion.div key="waiting"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1386,12 +1489,39 @@
               </div>
             )}
 
-            <div style={{ marginBottom: 8 }}>
-              <PulsingDots light />
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
-              {opponentSubmitted ? 'Opponent submitted! Preparing results...' : 'Waiting for opponent...'}
-            </p>
+            {opponentSubmitted ? (
+              <>
+                <div style={{ marginBottom: 8 }}>
+                  <PulsingDots light />
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--emerald)' }}>
+                  Opponent submitted! Preparing results...
+                </p>
+              </>
+            ) : (
+              <>
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <svg width="56" height="56" viewBox="0 0 56 56" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="28" cy="28" r={ringRadius} fill="none" stroke="rgba(52,211,153,0.1)" strokeWidth="3" />
+                    <circle cx="28" cy="28" r={ringRadius} fill="none"
+                      stroke={countdown > 20 ? 'var(--emerald)' : countdown > 10 ? 'var(--gold)' : 'var(--accent-red)'}
+                      strokeWidth="3"
+                      strokeDasharray={ringCircumference} strokeDashoffset={ringOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s linear, stroke 1s ease' }} />
+                  </svg>
+                  <span style={{
+                    position: 'absolute',
+                    fontSize: 14, fontWeight: 700,
+                    fontFamily: "'Space Mono', monospace",
+                    color: countdown > 20 ? 'var(--text-secondary)' : countdown > 10 ? 'var(--gold)' : 'var(--accent-red)',
+                  }}>{countdown}</span>
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  {countdown > 0 ? `Waiting for opponent... (${countdown}s)` : 'Opponent timed out'}
+                </p>
+              </>
+            )}
           </div>
         </motion.div>
       );
@@ -1807,7 +1937,13 @@
       const [toastVisible, setToastVisible] = useState(false);
 
       const canvasRef = useRef(null);
+      const screenRef = useRef(screen);
+      const myResultRef = useRef(myResult);
       const { analyze } = usePintAnalysis();
+
+      // Keep refs in sync
+      useEffect(() => { screenRef.current = screen; }, [screen]);
+      useEffect(() => { myResultRef.current = myResult; }, [myResult]);
 
       // WebRTC
       const webrtc = useWebRTC(socket, opponentId, isInitiator);
@@ -1882,15 +2018,27 @@
           showToast('Opponent declined rematch', 'error');
         };
 
-        const onOpponentDisconnected = () => {
-          showToast('Opponent disconnected', 'error');
+        const handleOpponentGone = (label) => {
+          const s = screenRef.current;
+          const activeScreens = ['countdown', 'capture-result', 'drinking'];
+          if (activeScreens.includes(s)) {
+            setSoloMode(true);
+            showToast(`${label} \u2014 continuing solo`);
+            return;
+          }
+          if (s === 'waiting' && myResultRef.current) {
+            setSoloMode(true);
+            recordGame({ outcome: 'win', accuracy: myResultRef.current.accuracy });
+            showToast(`${label} \u2014 you win!`);
+            setScreen('solo-reveal');
+            return;
+          }
+          showToast(label, 'error');
           handleLeaveRoom();
         };
 
-        const onOpponentLeft = () => {
-          showToast('Opponent left the game', 'error');
-          handleLeaveRoom();
-        };
+        const onOpponentDisconnected = () => handleOpponentGone('Opponent disconnected');
+        const onOpponentLeft = () => handleOpponentGone('Opponent left the game');
 
         socket.on('matched', onMatched);
         socket.on('ready-update', onReadyUpdate);
@@ -2051,6 +2199,7 @@
         <div style={{ minHeight: '100vh' }}>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           <Toast message={toastMsg} type={toastType} visible={toastVisible} />
+          <ConnectionBanner connected={connected} />
 
           <AnimatePresence mode="wait">
             {screen === 'landing' && (
@@ -2069,6 +2218,9 @@
               <MatchedScreen key="matched"
                 localStream={webrtc.localStream}
                 remoteStream={webrtc.remoteStream}
+                connectionState={webrtc.connectionState}
+                webrtcError={webrtc.error}
+                onRetryWebRTC={webrtc.retry}
                 onReady={handleMatchedContinue} />
             )}
 

@@ -137,6 +137,12 @@ function cleanupRoom(roomId) {
     room.resultTimeout = null;
   }
 
+  // Cancel any pending disconnect grace-period timeouts
+  if (room.disconnectTimeouts) {
+    Object.values(room.disconnectTimeouts).forEach(t => clearTimeout(t));
+    room.disconnectTimeouts = null;
+  }
+
   room.players.forEach(playerId => {
     playerRooms.delete(playerId);
   });
@@ -411,6 +417,59 @@ io.on('connection', (socket) => {
     console.log(`[R] ${socket.id} left room ${roomId}`);
   });
 
+  // ---- REJOIN (reconnect grace period) ----
+
+  socket.on('rejoin-room', (data) => {
+    const { roomId, oldSocketId } = data;
+    const room = rooms.get(roomId);
+    if (!room) {
+      socket.emit('rejoin-failed');
+      return;
+    }
+
+    // Cancel pending disconnect cleanup
+    if (room.disconnectTimeouts && room.disconnectTimeouts[oldSocketId]) {
+      clearTimeout(room.disconnectTimeouts[oldSocketId]);
+      delete room.disconnectTimeouts[oldSocketId];
+      console.log(`[R] Cancelled disconnect timeout for ${oldSocketId} in room ${roomId}`);
+    }
+
+    // Remap player in room
+    const playerIndex = room.players.indexOf(oldSocketId);
+    if (playerIndex === -1) {
+      socket.emit('rejoin-failed');
+      return;
+    }
+
+    room.players[playerIndex] = socket.id;
+
+    // Remap readyState, results, pintImages
+    if (room.readyState[oldSocketId] !== undefined) {
+      room.readyState[socket.id] = room.readyState[oldSocketId];
+      delete room.readyState[oldSocketId];
+    }
+    if (room.results[oldSocketId] !== undefined) {
+      room.results[socket.id] = room.results[oldSocketId];
+      delete room.results[oldSocketId];
+    }
+    if (room.pintImages[oldSocketId] !== undefined) {
+      room.pintImages[socket.id] = room.pintImages[oldSocketId];
+      delete room.pintImages[oldSocketId];
+    }
+    if (room.playerNames[oldSocketId] !== undefined) {
+      room.playerNames[socket.id] = room.playerNames[oldSocketId];
+      delete room.playerNames[oldSocketId];
+    }
+
+    // Update mappings
+    playerRooms.delete(oldSocketId);
+    playerRooms.set(socket.id, roomId);
+    socket.join(roomId);
+
+    socket.emit('rejoin-success', { roomId, state: room.state });
+    console.log(`[R] ${socket.id} rejoined room ${roomId} (was ${oldSocketId})`);
+  });
+
   // ---- DISCONNECT ----
 
   socket.on('disconnect', () => {
@@ -419,7 +478,7 @@ io.on('connection', (socket) => {
     // Remove from queue
     removeFromQueue(socket.id);
 
-    // Handle room cleanup
+    // Handle room cleanup with grace period
     const room = getRoom(socket.id);
     if (room) {
       const roomId = playerRooms.get(socket.id);
@@ -429,7 +488,15 @@ io.on('connection', (socket) => {
         io.to(opponentId).emit('opponent-disconnected');
       }
 
-      cleanupRoom(roomId);
+      // Delay cleanup by 10s to allow reconnect
+      if (!room.disconnectTimeouts) room.disconnectTimeouts = {};
+      room.disconnectTimeouts[socket.id] = setTimeout(() => {
+        // Only clean up if player hasn't reconnected
+        if (room.players.includes(socket.id)) {
+          console.log(`[R] Grace period expired for ${socket.id} in room ${roomId}, cleaning up`);
+          cleanupRoom(roomId);
+        }
+      }, 10000);
     }
   });
 });
