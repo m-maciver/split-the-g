@@ -255,6 +255,29 @@
       display: block;
     }
 
+    /* ---- Mute button ---- */
+    .mute-btn {
+      position: absolute;
+      bottom: 12px; left: 12px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(11,26,14,0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      color: var(--cream);
+      font-size: 16px;
+      transition: background 0.15s;
+    }
+    .mute-btn-active {
+      background: rgba(239,68,68,0.3);
+      border-color: rgba(239,68,68,0.4);
+      color: var(--accent-red);
+    }
+
     /* ---- PIP video ---- */
     .pip-video {
       position: absolute;
@@ -401,6 +424,23 @@
       pointer-events: none;
     }
 
+    /* ---- Reduced motion ---- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .pint-float { animation: none; }
+      .search-ring { animation: none; }
+      .pulsing-dots span { animation: none; opacity: 1; }
+      .timer-pulse { animation: none; }
+      .ready-badge-on { animation: none; }
+      .ambient-particle { animation: none; display: none; }
+      .confetti-particle { animation: none; display: none; }
+      .scan-line { animation: none; }
+    }
+
     /* ---- Ambient particles ---- */
     .ambient-particle {
       position: absolute;
@@ -418,10 +458,22 @@
   </style>
 </head>
 <body>
+  <div id="splash" style="position:fixed;inset:0;background:#0B1A0E;display:flex;align-items:center;justify-content:center;z-index:99999">
+    <div style="text-align:center">
+      <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:900;color:#F5E6C8;letter-spacing:0.04em">SPLIT THE G</div>
+      <div style="width:48px;height:3px;background:#34D399;border-radius:2px;margin:12px auto 0"></div>
+      <div style="margin-top:20px;display:flex;gap:6px;justify-content:center">
+        <span class="sp-dot" style="animation-delay:0s"></span>
+        <span class="sp-dot" style="animation-delay:0.2s"></span>
+        <span class="sp-dot" style="animation-delay:0.4s"></span>
+      </div>
+    </div>
+  </div>
+  <style>.sp-dot{width:8px;height:8px;border-radius:50%;background:#34D399;animation:sp 1.4s ease-in-out infinite}@keyframes sp{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}</style>
   <div id="root"></div>
 
   <!-- Noise texture overlay -->
-  <svg style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10000;opacity:0.035">
+  <svg style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.035">
     <filter id="noiseFilter">
       <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
     </filter>
@@ -429,7 +481,7 @@
   </svg>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo, useReducer } = React;
     const { motion, AnimatePresence } = window.Motion;
 
     // ============ CONFIG ============
@@ -440,7 +492,10 @@
       ]
     };
 
-    const springConfig = { type: "spring", stiffness: 300, damping: 30 };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const springConfig = prefersReducedMotion
+      ? { type: "tween", duration: 0 }
+      : { type: "spring", stiffness: 300, damping: 30 };
 
     // ============ UTILITIES ============
 
@@ -479,6 +534,24 @@
       lose: () => playTone(300, 0.3, 'sine', 0.1),
     };
 
+    // Compress image for network transmission
+    function compressImage(dataUrl, maxWidth = 640, quality = 0.6) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
     // Accuracy → color
     function getAccuracyColor(acc) {
       if (acc >= 80) return '#34D399';
@@ -516,10 +589,25 @@
       const [connected, setConnected] = useState(false);
 
       useEffect(() => {
-        const s = io();
+        const s = io({
+          transports: ['websocket', 'polling'],
+          reconnectionDelay: 500,
+          reconnectionDelayMax: 3000,
+          reconnectionAttempts: 10,
+          timeout: 10000
+        });
         setSocket(s);
         s.on('connect', () => setConnected(true));
         s.on('disconnect', () => setConnected(false));
+        s.on('connect_error', (err) => {
+          console.warn('[Socket] connect_error:', err.message);
+        });
+        s.io.on('reconnect', (attempt) => {
+          console.log('[Socket] reconnected after', attempt, 'attempts');
+        });
+        s.io.on('reconnect_failed', () => {
+          console.warn('[Socket] reconnect_failed — all attempts exhausted');
+        });
         return () => s.close();
       }, []);
 
@@ -590,6 +678,14 @@
       const [localStream, setLocalStream] = useState(null);
       const [connectionState, setConnectionState] = useState('new');
       const [error, setError] = useState(null); // null | 'camera' | 'connection'
+      const [isMuted, setIsMuted] = useState(false);
+
+      const toggleMute = useCallback(() => {
+        if (localStreamRef.current) {
+          localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !t.enabled; });
+          setIsMuted(m => !m);
+        }
+      }, []);
 
       const cleanup = useCallback(() => {
         if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
@@ -601,6 +697,7 @@
         setRemoteStream(null);
         setConnectionState('new');
         setError(null);
+        setIsMuted(false);
       }, []);
 
       const start = useCallback(async () => {
@@ -620,17 +717,19 @@
           stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
           pc.ontrack = (e) => {
-            setRemoteStream(e.streams[0]);
-            setConnectionState('connected');
+            if (e.streams && e.streams[0]) {
+              setRemoteStream(e.streams[0]);
+            }
+            if (e.track.kind === 'video') {
+              setConnectionState('connected');
+            }
           };
           pc.onicecandidate = (e) => {
             if (e.candidate) socket.emit('webrtc-ice-candidate', { candidate: e.candidate });
           };
           pc.onconnectionstatechange = () => {
-            if (pc.connectionState) {
-              setConnectionState(pc.connectionState);
-              if (pc.connectionState === 'failed') setError('connection');
-            }
+            setConnectionState(pc.connectionState);
+            if (pc.connectionState === 'failed') setError('connection');
           };
 
           if (isInitiator) {
@@ -667,7 +766,12 @@
         const onIce = async (data) => {
           const pc = pcRef.current;
           if (!pc) return;
-          try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
+          if (!data.candidate) return;
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } catch (e) {
+            console.warn('[WebRTC] Failed to add ICE candidate:', e.message);
+          }
         };
         socket.on('webrtc-offer', onOffer);
         socket.on('webrtc-answer', onAnswer);
@@ -679,7 +783,7 @@
         };
       }, [socket]);
 
-      return { localStream, remoteStream, connectionState, error, start, cleanup, retry };
+      return { localStream, remoteStream, connectionState, error, start, cleanup, retry, isMuted, toggleMute };
     }
 
     function useCamera(facingMode = 'environment') {
@@ -740,15 +844,24 @@
             const { width, height } = canvas;
             const imageDataObj = ctx.getImageData(0, 0, width, height);
             const pixels = imageDataObj.data;
-            const centerX = Math.floor(width / 2);
             const targetY = Math.floor(height / 2);
 
-            let liquidY = height;
-            for (let y = height - 1; y >= 0; y--) {
-              const i = (y * width + centerX) * 4;
-              const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-              if (lum > 100) { liquidY = y; break; }
+            // Scan 7 columns across the center third for robustness
+            const columns = [];
+            for (let c = 0; c < 7; c++) {
+              columns.push(Math.floor(width * (0.35 + c * 0.05)));
             }
+            const liquidYs = columns.map(cx => {
+              for (let y = height - 1; y >= 0; y--) {
+                const i = (y * width + cx) * 4;
+                const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                if (lum > 100) return y;
+              }
+              return height;
+            });
+            // Use median for noise resistance
+            liquidYs.sort((a, b) => a - b);
+            const liquidY = liquidYs[Math.floor(liquidYs.length / 2)];
 
             const distance = Math.abs(liquidY - targetY);
             const maxDistance = height * 0.15;
@@ -901,6 +1014,22 @@
       );
     }
 
+    function MuteButton({ isMuted, onToggle }) {
+      return (
+        <button className={`mute-btn ${isMuted ? 'mute-btn-active' : ''}`} onClick={onToggle} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+          {isMuted ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          )}
+        </button>
+      );
+    }
+
     function ShutterButton({ onClick, disabled }) {
       return (
         <button className="shutter-btn" onClick={onClick} disabled={disabled}>
@@ -934,14 +1063,20 @@
       const [display, setDisplay] = useState(0);
       useEffect(() => {
         if (value === null || value === undefined) return;
-        let start = 0;
-        const inc = value / (duration / 16);
-        const timer = setInterval(() => {
-          start += inc;
-          if (start >= value) { setDisplay(value); clearInterval(timer); }
-          else setDisplay(Math.floor(start));
-        }, 16);
-        return () => clearInterval(timer);
+        const startTime = performance.now();
+        let rafId;
+        const tick = (now) => {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          setDisplay(Math.floor(progress * value));
+          if (progress < 1) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            setDisplay(value);
+          }
+        };
+        rafId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(rafId);
       }, [value, duration]);
       return <span style={{ fontFamily: "'Space Mono', monospace", fontVariantNumeric: 'tabular-nums' }}>{display}</span>;
     }
@@ -973,7 +1108,7 @@
 
     // ============ SCREEN COMPONENTS ============
 
-    function LandingScreen({ onStart, stats, winRate }) {
+    function LandingScreen({ onStart, onQuickPlay, stats, winRate }) {
       const rank = getPlayerRank(stats.gamesPlayed, winRate);
       const hasPlayed = stats.gamesPlayed > 0;
 
@@ -1029,6 +1164,11 @@
 
             <div style={{ height: hasPlayed ? 16 : 32 }} />
             <button className="btn-primary" onClick={onStart}>Get Started</button>
+            {hasPlayed && (
+              <button className="btn-text" style={{ color: 'var(--emerald)', marginTop: 8, fontSize: 14, fontWeight: 600 }} onClick={onQuickPlay}>
+                Quick Play — Skip Photo
+              </button>
+            )}
           </div>
         </motion.div>
       );
@@ -1193,7 +1333,7 @@
       );
     }
 
-    function MatchedScreen({ localStream, remoteStream, onReady, connectionState, webrtcError, onRetryWebRTC }) {
+    function MatchedScreen({ localStream, remoteStream, onReady, connectionState, webrtcError, onRetryWebRTC, isMuted, onToggleMute, opponentPintImage }) {
       const [toastVisible, setToastVisible] = useState(true);
       const [timedOut, setTimedOut] = useState(false);
 
@@ -1230,7 +1370,7 @@
         >
           <Toast message="Matched! Connecting video..." visible={toastVisible} />
           <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gap: 8, padding: '8px 8px 0' }}>
-            <div className="video-container">
+            <div className="video-container" style={{ position: 'relative' }}>
               {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200, gap: 12, padding: 24, textAlign: 'center' }}>
                   {hasFailed ? (
@@ -1246,24 +1386,31 @@
                   )}
                 </div>
               )}
+              {opponentPintImage && (
+                <img src={opponentPintImage} alt="Opponent's pint"
+                  style={{ position: 'absolute', bottom: 8, right: 8, width: 48, height: 64, objectFit: 'cover', borderRadius: 8, border: '2px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
+              )}
             </div>
-            <div className="video-container">
+            <div className="video-container" style={{ position: 'relative' }}>
               {localStream ? <VideoFeed stream={localStream} muted mirrored /> : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200, gap: 12 }}>
                   <PulsingDots light />
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Starting camera...</p>
                 </div>
               )}
+              {localStream && <MuteButton isMuted={isMuted} onToggle={onToggleMute} />}
             </div>
           </div>
           <div style={{ padding: '16px 24px' }}>
-            <button className="btn-primary-light" onClick={onReady}>Continue</button>
+            <button className="btn-primary-light" onClick={onReady} disabled={!localStream}>
+              {localStream ? 'Continue' : 'Starting camera...'}
+            </button>
           </div>
         </motion.div>
       );
     }
 
-    function ReadyScreen({ localStream, remoteStream, myReady, opponentReady, onReady }) {
+    function ReadyScreen({ localStream, remoteStream, myReady, opponentReady, onReady, isMuted, onToggleMute }) {
       return (
         <motion.div
           key="ready"
@@ -1298,6 +1445,7 @@
                   {myReady ? 'READY' : '...'}
                 </div>
               </div>
+              {localStream && <MuteButton isMuted={isMuted} onToggle={onToggleMute} />}
             </div>
           </div>
           <div style={{ padding: '16px 24px' }}>
@@ -1311,13 +1459,14 @@
       );
     }
 
-    function CountdownScreen({ gameStartTime, remoteStream, onDone, soloMode }) {
+    function CountdownScreen({ gameStartTime, remoteStream, onDone, soloMode, isMuted, onToggleMute }) {
       const [phase, setPhase] = useState('pre'); // 'pre' | 'timer'
       const [preNum, setPreNum] = useState(3);
       const [timer, setTimer] = useState(30);
       const [showGo, setShowGo] = useState(false);
       const [flash, setFlash] = useState(false);
-      const timerRef = useRef(null);
+      const rafRef = useRef(null);
+      const timerStartRef = useRef(null);
 
       const goPhrase = useMemo(() => ['Slainte!', 'GO!', 'Slainte!', 'GO!'][Math.floor(Math.random() * 4)], []);
 
@@ -1332,9 +1481,7 @@
       useEffect(() => {
         // Pre-countdown: 3, 2, 1, GO!
         const delay = gameStartTime ? Math.max(0, gameStartTime - Date.now()) : 0;
-        const startMs = Date.now() + delay;
 
-        // 3
         const t3 = setTimeout(() => setPreNum(3), 0);
         const t2 = setTimeout(() => setPreNum(2), delay > 2000 ? delay / 3 : 1000);
         const t1 = setTimeout(() => setPreNum(1), delay > 2000 ? (delay / 3) * 2 : 2000);
@@ -1348,21 +1495,36 @@
 
         const tStart = setTimeout(() => {
           setPhase('timer');
-          setTimer(30);
-          timerRef.current = setInterval(() => {
-            setTimer(t => {
-              const next = Math.max(0, +(t - 0.01).toFixed(2));
-              if (next <= 0) { clearInterval(timerRef.current); return 0; }
-              return next;
-            });
-          }, 10);
+          timerStartRef.current = performance.now();
+          const tick = (now) => {
+            const elapsed = (now - timerStartRef.current) / 1000;
+            const remaining = Math.max(0, +(30 - elapsed).toFixed(1));
+            setTimer(remaining);
+            if (remaining > 0) {
+              rafRef.current = requestAnimationFrame(tick);
+            }
+          };
+          rafRef.current = requestAnimationFrame(tick);
         }, Math.max(delay, 3000));
 
         return () => {
           clearTimeout(t3); clearTimeout(t2); clearTimeout(t1); clearTimeout(tGo); clearTimeout(tStart);
-          if (timerRef.current) clearInterval(timerRef.current);
+          if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
       }, [gameStartTime]);
+
+      // Haptic + sound at timer thresholds
+      const timerInt = Math.floor(timer);
+      useEffect(() => {
+        if (phase !== 'timer' || timer >= 30) return;
+        if (timerInt === 10) {
+          haptic(30);
+          sfx.tick();
+        } else if (timerInt <= 5 && timerInt > 0) {
+          haptic(20);
+          sfx.tick();
+        }
+      }, [timerInt, phase]);
 
       // Auto-transition when timer hits 0
       useEffect(() => {
@@ -1419,6 +1581,7 @@
                   <PulsingDots light />
                 </div>
               )}
+              {onToggleMute && <MuteButton isMuted={isMuted} onToggle={onToggleMute} />}
             </div>
           )}
 
@@ -1437,7 +1600,7 @@
 
           <div className="layout" style={{ paddingBottom: 16 }}>
             <button className="btn-success" onClick={() => {
-              if (timerRef.current) clearInterval(timerRef.current);
+              if (rafRef.current) cancelAnimationFrame(rafRef.current);
               haptic(50);
               onDone();
             }}>I'm Done</button>
@@ -1446,19 +1609,28 @@
       );
     }
 
-    function WaitingScreen({ accuracy, resultImage, remoteStream, opponentSubmitted }) {
-      const [countdown, setCountdown] = useState(90);
+    function WaitingScreen({ accuracy, resultImage, remoteStream, opponentSubmitted, timeoutEnd }) {
+      const [countdown, setCountdown] = useState(() => {
+        if (timeoutEnd) return Math.max(0, Math.ceil((timeoutEnd - Date.now()) / 1000));
+        return 90;
+      });
 
       useEffect(() => {
         if (opponentSubmitted) return;
         const interval = setInterval(() => {
-          setCountdown(c => {
-            if (c <= 1) { clearInterval(interval); return 0; }
-            return c - 1;
-          });
+          if (timeoutEnd) {
+            const remaining = Math.max(0, Math.ceil((timeoutEnd - Date.now()) / 1000));
+            setCountdown(remaining);
+            if (remaining <= 0) clearInterval(interval);
+          } else {
+            setCountdown(c => {
+              if (c <= 1) { clearInterval(interval); return 0; }
+              return c - 1;
+            });
+          }
         }, 1000);
         return () => clearInterval(interval);
-      }, [opponentSubmitted]);
+      }, [opponentSubmitted, timeoutEnd]);
 
       const progress = countdown / 90;
       const ringRadius = 22;
@@ -1527,7 +1699,7 @@
       );
     }
 
-    function RevealScreen({ revealData, playerId, onRematch, onNewOpponent, rematchRequested, rematchPending, onAcceptRematch, onDeclineRematch, stats, winRate }) {
+    function RevealScreen({ revealData, playerId, onRematch, onNewOpponent, rematchRequested, rematchPending, onAcceptRematch, onDeclineRematch, stats, winRate, isRematch }) {
       const [phase, setPhase] = useState(0);
       const [showConfetti, setShowConfetti] = useState(false);
 
@@ -1540,16 +1712,19 @@
       const rank = getPlayerRank(stats.gamesPlayed, winRate);
 
       useEffect(() => {
-        const timings = [0, 1000, 2500, 4000, 5500, 7000, 8500];
+        const full = [0, 1000, 2500, 4000, 5500, 7000, 8500];
+        const fast = [0, 400, 1000, 1600, 2200, 2800, 3400];
+        const timings = isRematch ? fast : full;
         const timers = timings.map((delay, i) => setTimeout(() => setPhase(i), delay));
+        const confettiDelay = isRematch ? 3200 : 7500;
         const confettiTimer = setTimeout(() => {
           if (winnerId === playerId) {
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 2500);
           }
-        }, 7500);
+        }, confettiDelay);
         return () => { timers.forEach(clearTimeout); clearTimeout(confettiTimer); };
-      }, [winnerId, playerId]);
+      }, [winnerId, playerId, isRematch]);
 
       // Sound + haptic on winner reveal
       useEffect(() => {
@@ -1894,59 +2069,98 @@
 
     // ============ MAIN APP ============
 
+    const initialGameState = {
+      screen: 'landing',
+      roomId: null,
+      playerId: null,
+      opponentId: null,
+      isInitiator: false,
+      myReady: false,
+      opponentReady: false,
+      gameStartTime: null,
+      pintImage: null,
+      opponentPintImage: null,
+      myResult: null,
+      opponentSubmitted: false,
+      revealData: null,
+      capturedResultImage: null,
+      isScanning: false,
+      soloMode: false,
+      timeoutEnd: null,
+      rematchRequested: false,
+      rematchPending: false,
+      isRematch: false,
+    };
+
+    function gameReducer(state, action) {
+      switch (action.type) {
+        case 'SET_SCREEN':
+          return { ...state, screen: action.screen };
+        case 'MATCHED':
+          return { ...state, roomId: action.roomId, playerId: action.playerId, opponentId: action.opponentId, isInitiator: action.isInitiator, opponentPintImage: action.opponentPintImage || null, screen: 'matched' };
+        case 'READY_UPDATE':
+          return { ...state, myReady: action.myReady !== undefined ? action.myReady : state.myReady, opponentReady: action.opponentReady !== undefined ? action.opponentReady : state.opponentReady };
+        case 'SET_MY_READY':
+          return { ...state, myReady: true };
+        case 'GAME_START':
+          return { ...state, gameStartTime: action.countdownStart, screen: 'countdown' };
+        case 'OPPONENT_SUBMITTED':
+          return { ...state, opponentSubmitted: true, timeoutEnd: action.timeoutEnd || state.timeoutEnd };
+        case 'SET_TIMEOUT_END':
+          return { ...state, timeoutEnd: action.timeoutEnd };
+        case 'REVEAL_START':
+          return { ...state, revealData: action.data, screen: 'reveal' };
+        case 'SET_SOLO_MODE':
+          return { ...state, soloMode: true, gameStartTime: action.gameStartTime, screen: 'countdown' };
+        case 'SET_MY_RESULT':
+          return { ...state, myResult: action.result };
+        case 'SET_PINT_IMAGE':
+          return { ...state, pintImage: action.image };
+        case 'SET_CAPTURED_RESULT':
+          return { ...state, capturedResultImage: action.image, isScanning: action.isScanning !== undefined ? action.isScanning : state.isScanning };
+        case 'SET_SCANNING':
+          return { ...state, isScanning: action.isScanning };
+        case 'SET_REMATCH_STATE':
+          return { ...state, rematchRequested: action.requested !== undefined ? action.requested : state.rematchRequested, rematchPending: action.pending !== undefined ? action.pending : state.rematchPending };
+        case 'REMATCH_ACCEPTED':
+          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, rematchRequested: false, rematchPending: false, capturedResultImage: null, isScanning: false, pintImage: null, timeoutEnd: null, isRematch: true, screen: 'capture-pint' };
+        case 'LEAVE_ROOM':
+          return { ...initialGameState };
+        case 'SOLO_HOME':
+          return { ...state, soloMode: false, myResult: null, capturedResultImage: null, isScanning: false, pintImage: null, timeoutEnd: null, screen: 'landing' };
+        case 'SOLO_PLAY_AGAIN':
+          return { ...state, myResult: null, capturedResultImage: null, isScanning: false, gameStartTime: action.gameStartTime, screen: 'countdown' };
+        case 'SET_SOLO_CONTINUE':
+          return { ...state, soloMode: true };
+        default:
+          return state;
+      }
+    }
+
     function App() {
       const { socket, connected } = useSocket();
-      const [screen, setScreen] = useState('landing');
       const { stats, recordGame, winRate } = useStats();
 
-      // Room/match state
-      const [roomId, setRoomId] = useState(null);
-      const [playerId, setPlayerId] = useState(null);
-      const [opponentId, setOpponentId] = useState(null);
-      const [isInitiator, setIsInitiator] = useState(false);
+      const [g, dispatch] = useReducer(gameReducer, initialGameState);
 
-      // Ready
-      const [myReady, setMyReady] = useState(false);
-      const [opponentReady, setOpponentReady] = useState(false);
-
-      // Game
-      const [gameStartTime, setGameStartTime] = useState(null);
-
-      // Pint capture
-      const [pintImage, setPintImage] = useState(null);
-
-      // Result
-      const [myResult, setMyResult] = useState(null);
-      const [opponentSubmitted, setOpponentSubmitted] = useState(false);
-      const [revealData, setRevealData] = useState(null);
-
-      // Capture-result
-      const [capturedResultImage, setCapturedResultImage] = useState(null);
-      const [isScanning, setIsScanning] = useState(false);
-
-      // Solo mode
-      const [soloMode, setSoloMode] = useState(false);
-
-      // Rematch
-      const [rematchRequested, setRematchRequested] = useState(false);
-      const [rematchPending, setRematchPending] = useState(false);
-
-      // Toast
+      // Toast (kept separate — high-frequency, UI-only)
       const [toastMsg, setToastMsg] = useState(null);
       const [toastType, setToastType] = useState('info');
       const [toastVisible, setToastVisible] = useState(false);
 
       const canvasRef = useRef(null);
-      const screenRef = useRef(screen);
-      const myResultRef = useRef(myResult);
+      const screenRef = useRef(g.screen);
+      const myResultRef = useRef(g.myResult);
+      const soloModeRef = useRef(g.soloMode);
       const { analyze } = usePintAnalysis();
 
       // Keep refs in sync
-      useEffect(() => { screenRef.current = screen; }, [screen]);
-      useEffect(() => { myResultRef.current = myResult; }, [myResult]);
+      useEffect(() => { screenRef.current = g.screen; }, [g.screen]);
+      useEffect(() => { myResultRef.current = g.myResult; }, [g.myResult]);
+      useEffect(() => { soloModeRef.current = g.soloMode; }, [g.soloMode]);
 
       // WebRTC
-      const webrtc = useWebRTC(socket, opponentId, isInitiator);
+      const webrtc = useWebRTC(socket, g.opponentId, g.isInitiator);
 
       const showToast = useCallback((msg, type = 'info') => {
         setToastMsg(msg);
@@ -1957,64 +2171,72 @@
 
       // Track stats on reveal
       useEffect(() => {
-        if (revealData && playerId) {
-          const myRes = revealData.results[playerId];
+        if (g.revealData && g.playerId) {
+          const myRes = g.revealData.results[g.playerId];
           const accuracy = myRes ? myRes.accuracy : 0;
-          if (revealData.winnerId === playerId) recordGame({ outcome: 'win', accuracy });
-          else if (revealData.winnerId === null) recordGame({ outcome: 'tie', accuracy });
+          if (g.revealData.winnerId === g.playerId) recordGame({ outcome: 'win', accuracy });
+          else if (g.revealData.winnerId === null) recordGame({ outcome: 'tie', accuracy });
           else recordGame({ outcome: 'loss', accuracy });
         }
-      }, [revealData, playerId, recordGame]);
+      }, [g.revealData, g.playerId, recordGame]);
+
+      const handleLeaveRoom = useCallback(() => {
+        webrtc.cleanup();
+        if (socket) socket.emit('leave-room');
+        dispatch({ type: 'LEAVE_ROOM' });
+      }, [socket, webrtc]);
 
       // ---- Socket events ----
       useEffect(() => {
         if (!socket) return;
 
         const onMatched = (data) => {
-          setRoomId(data.roomId);
-          setPlayerId(data.playerId);
-          setOpponentId(data.opponentId);
-          setIsInitiator(data.isInitiator);
-          setScreen('matched');
+          dispatch({ type: 'MATCHED', roomId: data.roomId, playerId: data.playerId, opponentId: data.opponentId, isInitiator: data.isInitiator, opponentPintImage: data.opponentPintImage });
         };
 
         const onReadyUpdate = (data) => {
           const myId = socket.id;
-          setMyReady(data.readyState[myId]);
           const oppId = Object.keys(data.readyState).find(id => id !== myId);
-          if (oppId) setOpponentReady(data.readyState[oppId]);
+          dispatch({ type: 'READY_UPDATE', myReady: data.readyState[myId], opponentReady: oppId ? data.readyState[oppId] : false });
         };
 
         const onGameStart = (data) => {
-          setGameStartTime(data.countdownStart);
-          setScreen('countdown');
+          dispatch({ type: 'GAME_START', countdownStart: data.countdownStart });
         };
 
-        const onOpponentSubmitted = () => setOpponentSubmitted(true);
+        const onOpponentSubmitted = (data) => {
+          dispatch({ type: 'OPPONENT_SUBMITTED', timeoutEnd: data && data.timeoutEnd ? data.timeoutEnd : null });
+        };
+
+        const onSubmitAck = (data) => {
+          if (data && data.timeoutEnd) dispatch({ type: 'SET_TIMEOUT_END', timeoutEnd: data.timeoutEnd });
+        };
 
         const onRevealStart = (data) => {
-          setRevealData(data);
-          setScreen('reveal');
+          dispatch({ type: 'REVEAL_START', data });
         };
 
-        const onRematchRequested = () => setRematchPending(true);
+        const onServerError = (data) => {
+          showToast(data && data.message ? data.message : 'Server error', 'error');
+        };
+
+        const onRejoinSuccess = () => {
+          showToast('Reconnected to game');
+        };
+
+        const onRejoinFailed = () => {
+          showToast('Failed to rejoin game', 'error');
+          handleLeaveRoom();
+        };
+
+        const onRematchRequested = () => dispatch({ type: 'SET_REMATCH_STATE', pending: true });
 
         const onRematchAccepted = () => {
-          setMyReady(false);
-          setOpponentReady(false);
-          setMyResult(null);
-          setOpponentSubmitted(false);
-          setRevealData(null);
-          setRematchRequested(false);
-          setRematchPending(false);
-          setCapturedResultImage(null);
-          setIsScanning(false);
-          setPintImage(null);
-          setScreen('capture-pint');
+          dispatch({ type: 'REMATCH_ACCEPTED' });
         };
 
         const onRematchDeclined = () => {
-          setRematchRequested(false);
+          dispatch({ type: 'SET_REMATCH_STATE', requested: false });
           showToast('Opponent declined rematch', 'error');
         };
 
@@ -2022,15 +2244,15 @@
           const s = screenRef.current;
           const activeScreens = ['countdown', 'capture-result', 'drinking'];
           if (activeScreens.includes(s)) {
-            setSoloMode(true);
+            dispatch({ type: 'SET_SOLO_CONTINUE' });
             showToast(`${label} \u2014 continuing solo`);
             return;
           }
           if (s === 'waiting' && myResultRef.current) {
-            setSoloMode(true);
+            dispatch({ type: 'SET_SOLO_CONTINUE' });
             recordGame({ outcome: 'win', accuracy: myResultRef.current.accuracy });
             showToast(`${label} \u2014 you win!`);
-            setScreen('solo-reveal');
+            dispatch({ type: 'SET_SCREEN', screen: 'solo-reveal' });
             return;
           }
           showToast(label, 'error');
@@ -2044,121 +2266,105 @@
         socket.on('ready-update', onReadyUpdate);
         socket.on('game-start', onGameStart);
         socket.on('opponent-submitted', onOpponentSubmitted);
+        socket.on('submit-ack', onSubmitAck);
         socket.on('reveal-start', onRevealStart);
         socket.on('rematch-requested', onRematchRequested);
         socket.on('rematch-accepted', onRematchAccepted);
         socket.on('rematch-declined', onRematchDeclined);
         socket.on('opponent-disconnected', onOpponentDisconnected);
         socket.on('opponent-left', onOpponentLeft);
+        socket.on('error', onServerError);
+        socket.on('rejoin-success', onRejoinSuccess);
+        socket.on('rejoin-failed', onRejoinFailed);
 
         return () => {
           socket.off('matched', onMatched);
           socket.off('ready-update', onReadyUpdate);
           socket.off('game-start', onGameStart);
           socket.off('opponent-submitted', onOpponentSubmitted);
+          socket.off('submit-ack', onSubmitAck);
           socket.off('reveal-start', onRevealStart);
           socket.off('rematch-requested', onRematchRequested);
           socket.off('rematch-accepted', onRematchAccepted);
           socket.off('rematch-declined', onRematchDeclined);
           socket.off('opponent-disconnected', onOpponentDisconnected);
           socket.off('opponent-left', onOpponentLeft);
+          socket.off('error', onServerError);
+          socket.off('rejoin-success', onRejoinSuccess);
+          socket.off('rejoin-failed', onRejoinFailed);
         };
-      }, [socket, showToast]);
+      }, [socket, showToast, handleLeaveRoom]);
 
       // Start WebRTC when matched
       useEffect(() => {
-        if (screen === 'matched' && socket && opponentId) {
+        if (g.screen === 'matched' && socket && g.opponentId) {
           webrtc.start();
         }
-      }, [screen, socket, opponentId]);
-
-      // Auto-advance from matched to ready when remote stream arrives
-      useEffect(() => {
-        if (screen === 'matched' && webrtc.remoteStream) {
-          // Don't auto-advance — let user tap Continue
-        }
-      }, [screen, webrtc.remoteStream]);
+      }, [g.screen, socket, g.opponentId]);
 
       // ---- Handlers ----
-      const handleLeaveRoom = useCallback(() => {
-        webrtc.cleanup();
-        if (socket) socket.emit('leave-room');
-        setRoomId(null);
-        setPlayerId(null);
-        setOpponentId(null);
-        setMyReady(false);
-        setOpponentReady(false);
-        setMyResult(null);
-        setOpponentSubmitted(false);
-        setRevealData(null);
-        setRematchRequested(false);
-        setRematchPending(false);
-        setCapturedResultImage(null);
-        setIsScanning(false);
-        setPintImage(null);
-        setSoloMode(false);
-        setScreen('landing');
-      }, [socket, webrtc]);
+      const handleGetStarted = () => dispatch({ type: 'SET_SCREEN', screen: 'capture-pint' });
 
-      const handleGetStarted = () => setScreen('capture-pint');
+      const handleQuickPlay = () => {
+        dispatch({ type: 'SET_SCREEN', screen: 'searching' });
+        if (socket) socket.emit('join-queue');
+      };
 
       const handleSoloMode = useCallback(() => {
         if (socket) socket.emit('leave-queue');
-        setSoloMode(true);
-        setGameStartTime(Date.now() + 3000);
-        setScreen('countdown');
+        dispatch({ type: 'SET_SOLO_MODE', gameStartTime: Date.now() + 3000 });
         showToast('Solo mode activated', 'info');
       }, [socket, showToast]);
 
-      const handlePintCaptured = (img) => {
-        setPintImage(img);
-        setScreen('searching');
+      const handlePintCaptured = async (img) => {
+        dispatch({ type: 'SET_PINT_IMAGE', image: img });
+        dispatch({ type: 'SET_SCREEN', screen: 'searching' });
+        const compressed = await compressImage(img);
         if (socket) {
+          socket.emit('submit-pint-image', { image: compressed });
           socket.emit('join-queue');
-          socket.emit('submit-pint-image', { image: img });
         }
       };
 
       const handleCancelSearch = () => {
         if (socket) socket.emit('leave-queue');
-        setPintImage(null);
-        setScreen('landing');
+        dispatch({ type: 'SET_PINT_IMAGE', image: null });
+        dispatch({ type: 'SET_SCREEN', screen: 'landing' });
       };
 
-      const handleMatchedContinue = () => setScreen('ready');
+      const handleMatchedContinue = () => dispatch({ type: 'SET_SCREEN', screen: 'ready' });
 
       const handleReady = () => {
         if (socket) socket.emit('player-ready');
-        setMyReady(true);
+        dispatch({ type: 'SET_MY_READY' });
       };
 
-      const handleDrinkingDone = useCallback(() => setScreen('capture-result'), []);
+      const handleDrinkingDone = useCallback(() => dispatch({ type: 'SET_SCREEN', screen: 'capture-result' }), []);
 
       const handleResultCaptured = async (img) => {
-        setCapturedResultImage(img);
-        setIsScanning(true);
+        dispatch({ type: 'SET_CAPTURED_RESULT', image: img, isScanning: true });
 
         // Wait for scan animation, then analyze
         setTimeout(async () => {
           const canvas = canvasRef.current;
           const analysis = await analyze(img, canvas);
-          setIsScanning(false);
-          setMyResult({ ...analysis, image: img });
+          dispatch({ type: 'SET_SCANNING', isScanning: false });
+          dispatch({ type: 'SET_MY_RESULT', result: { ...analysis, image: img } });
 
-          if (soloMode) {
-            // Solo: track stats and go straight to solo reveal
+          if (soloModeRef.current) {
             const outcome = analysis.accuracy >= 50 ? 'win' : 'loss';
             recordGame({ outcome, accuracy: analysis.accuracy });
-            setScreen('solo-reveal');
+            dispatch({ type: 'SET_SCREEN', screen: 'solo-reveal' });
           } else {
-            if (socket) socket.emit('submit-result', { image: img, accuracy: analysis.accuracy });
-            setScreen('waiting');
+            const compressed = await compressImage(img);
+            if (socket) socket.emit('submit-result', { image: compressed, accuracy: analysis.accuracy });
+            dispatch({ type: 'SET_SCREEN', screen: 'waiting' });
           }
         }, 1800);
       };
 
       const handleRematch = () => {
-        setRematchRequested(true);
+        dispatch({ type: 'SET_REMATCH_STATE', requested: true });
         if (socket) socket.emit('request-rematch');
       };
 
@@ -2168,31 +2374,22 @@
 
       const handleDeclineRematch = () => {
         if (socket) socket.emit('decline-rematch');
-        setRematchPending(false);
+        dispatch({ type: 'SET_REMATCH_STATE', pending: false });
       };
 
       const handleNewOpponent = () => {
         handleLeaveRoom();
         setTimeout(() => {
-          setScreen('capture-pint');
+          dispatch({ type: 'SET_SCREEN', screen: 'capture-pint' });
         }, 100);
       };
 
       const handleSoloPlayAgain = () => {
-        setMyResult(null);
-        setCapturedResultImage(null);
-        setIsScanning(false);
-        setGameStartTime(Date.now() + 3000);
-        setScreen('countdown');
+        dispatch({ type: 'SOLO_PLAY_AGAIN', gameStartTime: Date.now() + 3000 });
       };
 
       const handleSoloHome = () => {
-        setSoloMode(false);
-        setMyResult(null);
-        setCapturedResultImage(null);
-        setIsScanning(false);
-        setPintImage(null);
-        setScreen('landing');
+        dispatch({ type: 'SOLO_HOME' });
       };
 
       return (
@@ -2202,78 +2399,87 @@
           <ConnectionBanner connected={connected} />
 
           <AnimatePresence mode="wait">
-            {screen === 'landing' && (
-              <LandingScreen key="landing" onStart={handleGetStarted} stats={stats} winRate={winRate} />
+            {g.screen === 'landing' && (
+              <LandingScreen key="landing" onStart={handleGetStarted} onQuickPlay={handleQuickPlay} stats={stats} winRate={winRate} />
             )}
 
-            {screen === 'capture-pint' && (
-              <CaptureScreen key="capture-pint" mode="full-pint" onCapture={handlePintCaptured} onCancel={() => setScreen('landing')} />
+            {g.screen === 'capture-pint' && (
+              <CaptureScreen key="capture-pint" mode="full-pint" onCapture={handlePintCaptured} onCancel={() => dispatch({ type: 'SET_SCREEN', screen: 'landing' })} />
             )}
 
-            {screen === 'searching' && (
-              <SearchingScreen key="searching" onCancel={handleCancelSearch} onSolo={handleSoloMode} pintThumbnail={pintImage} />
+            {g.screen === 'searching' && (
+              <SearchingScreen key="searching" onCancel={handleCancelSearch} onSolo={handleSoloMode} pintThumbnail={g.pintImage} />
             )}
 
-            {screen === 'matched' && (
+            {g.screen === 'matched' && (
               <MatchedScreen key="matched"
                 localStream={webrtc.localStream}
                 remoteStream={webrtc.remoteStream}
                 connectionState={webrtc.connectionState}
                 webrtcError={webrtc.error}
                 onRetryWebRTC={webrtc.retry}
-                onReady={handleMatchedContinue} />
+                onReady={handleMatchedContinue}
+                isMuted={webrtc.isMuted}
+                onToggleMute={webrtc.toggleMute}
+                opponentPintImage={g.opponentPintImage} />
             )}
 
-            {screen === 'ready' && (
+            {g.screen === 'ready' && (
               <ReadyScreen key="ready"
                 localStream={webrtc.localStream}
                 remoteStream={webrtc.remoteStream}
-                myReady={myReady}
-                opponentReady={opponentReady}
-                onReady={handleReady} />
+                myReady={g.myReady}
+                opponentReady={g.opponentReady}
+                onReady={handleReady}
+                isMuted={webrtc.isMuted}
+                onToggleMute={webrtc.toggleMute} />
             )}
 
-            {screen === 'countdown' && (
+            {g.screen === 'countdown' && (
               <CountdownScreen key="countdown"
-                gameStartTime={gameStartTime}
+                gameStartTime={g.gameStartTime}
                 remoteStream={webrtc.remoteStream}
                 onDone={handleDrinkingDone}
-                soloMode={soloMode} />
+                soloMode={g.soloMode}
+                isMuted={webrtc.isMuted}
+                onToggleMute={webrtc.toggleMute} />
             )}
 
-            {screen === 'capture-result' && (
+            {g.screen === 'capture-result' && (
               <CaptureScreen key="capture-result" mode="result"
                 onCapture={handleResultCaptured}
-                capturedImage={capturedResultImage}
-                isScanning={isScanning} />
+                capturedImage={g.capturedResultImage}
+                isScanning={g.isScanning} />
             )}
 
-            {screen === 'waiting' && (
+            {g.screen === 'waiting' && (
               <WaitingScreen key="waiting"
-                accuracy={myResult?.accuracy ?? null}
-                resultImage={myResult?.image}
+                accuracy={g.myResult?.accuracy ?? null}
+                resultImage={g.myResult?.image}
                 remoteStream={webrtc.remoteStream}
-                opponentSubmitted={opponentSubmitted} />
+                opponentSubmitted={g.opponentSubmitted}
+                timeoutEnd={g.timeoutEnd} />
             )}
 
-            {screen === 'reveal' && revealData && (
+            {g.screen === 'reveal' && g.revealData && (
               <RevealScreen key="reveal"
-                revealData={revealData}
-                playerId={playerId}
+                revealData={g.revealData}
+                playerId={g.playerId}
                 onRematch={handleRematch}
                 onNewOpponent={handleNewOpponent}
-                rematchRequested={rematchRequested}
-                rematchPending={rematchPending}
+                rematchRequested={g.rematchRequested}
+                rematchPending={g.rematchPending}
                 onAcceptRematch={handleAcceptRematch}
                 onDeclineRematch={handleDeclineRematch}
                 stats={stats}
-                winRate={winRate} />
+                winRate={winRate}
+                isRematch={g.isRematch} />
             )}
 
-            {screen === 'solo-reveal' && myResult && (
+            {g.screen === 'solo-reveal' && g.myResult && (
               <SoloRevealScreen key="solo-reveal"
-                accuracy={myResult.accuracy}
-                resultImage={myResult.image}
+                accuracy={g.myResult.accuracy}
+                resultImage={g.myResult.image}
                 onPlayAgain={handleSoloPlayAgain}
                 onHome={handleSoloHome}
                 stats={stats}
@@ -2286,6 +2492,8 @@
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
+    const splash = document.getElementById('splash');
+    if (splash) splash.remove();
   </script>
 </body>
 </html>

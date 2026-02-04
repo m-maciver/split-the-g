@@ -65,6 +65,11 @@ const io = new Server(httpsServer, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
+  },
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 10000
   }
 });
 
@@ -73,6 +78,7 @@ const io = new Server(httpsServer, {
 const matchmakingQueue = [];
 const rooms = new Map();
 const playerRooms = new Map(); // socketId -> roomId
+const pendingPintImages = new Map(); // socketId -> base64 image (before room exists)
 
 function generateRoomId() {
   return 'room_' + Math.random().toString(36).substr(2, 9);
@@ -186,27 +192,40 @@ io.on('connection', (socket) => {
 
       const room = createRoom(player1, player2);
 
+      // Copy pending pint images to room
+      if (pendingPintImages.has(player1.id)) {
+        room.pintImages[player1.id] = pendingPintImages.get(player1.id);
+        pendingPintImages.delete(player1.id);
+      }
+      if (pendingPintImages.has(player2.id)) {
+        room.pintImages[player2.id] = pendingPintImages.get(player2.id);
+        pendingPintImages.delete(player2.id);
+      }
+
       console.log(`[M] Match created: ${room.id} (${player1.id} vs ${player2.id})`);
 
-      // Notify both players
+      // Notify both players (include opponent's pint image)
       player1.emit('matched', {
         roomId: room.id,
         playerId: player1.id,
         opponentId: player2.id,
-        isInitiator: true // Player 1 initiates WebRTC
+        isInitiator: true,
+        opponentPintImage: room.pintImages[player2.id] || null
       });
 
       player2.emit('matched', {
         roomId: room.id,
         playerId: player2.id,
         opponentId: player1.id,
-        isInitiator: false
+        isInitiator: false,
+        opponentPintImage: room.pintImages[player1.id] || null
       });
     }
   });
 
   socket.on('leave-queue', () => {
     removeFromQueue(socket.id);
+    pendingPintImages.delete(socket.id);
     console.log(`[Q] ${socket.id} left queue. Queue size: ${matchmakingQueue.length}`);
   });
 
@@ -270,25 +289,45 @@ io.on('connection', (socket) => {
 
   socket.on('submit-pint-image', (data) => {
     const room = getRoom(socket.id);
-    if (!room) return;
-    room.pintImages[socket.id] = data.image;
+    if (room) {
+      room.pintImages[socket.id] = data.image;
+    } else {
+      // Store pending image for when room is created
+      pendingPintImages.set(socket.id, data.image);
+    }
   });
 
   socket.on('submit-result', (data) => {
     const room = getRoom(socket.id);
     if (!room) return;
 
+    // Validate accuracy
+    const accuracy = Math.max(0, Math.min(100, Math.round(Number(data.accuracy) || 0)));
+
+    // Reject oversized images (> 2.8MB base64 ~ 2MB decoded)
+    let image = data.image;
+    if (typeof image === 'string' && image.length > 2.8 * 1024 * 1024) {
+      socket.emit('error', { message: 'Image too large' });
+      return;
+    }
+
     room.results[socket.id] = {
       submitted: true,
-      image: data.image,
-      accuracy: data.accuracy
+      image: image,
+      accuracy: accuracy
     };
 
     const roomId = playerRooms.get(socket.id);
     const opponentId = getOpponentId(socket.id);
 
+    // Compute timeout end for countdown sync
+    const timeoutEnd = Date.now() + 90000;
+
+    // Acknowledge submission to sender
+    socket.emit('submit-ack', { timeoutEnd });
+
     // Notify opponent that this player submitted
-    io.to(opponentId).emit('opponent-submitted');
+    io.to(opponentId).emit('opponent-submitted', { timeoutEnd });
 
     // Start 90s timeout for result submission if first to submit
     const otherSubmitted = room.results[opponentId] && room.results[opponentId].submitted;
@@ -475,8 +514,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`[-] Player disconnected: ${socket.id}`);
 
-    // Remove from queue
+    // Remove from queue and clean up pending data
     removeFromQueue(socket.id);
+    pendingPintImages.delete(socket.id);
 
     // Handle room cleanup with grace period
     const room = getRoom(socket.id);
@@ -494,6 +534,11 @@ io.on('connection', (socket) => {
         // Only clean up if player hasn't reconnected
         if (room.players.includes(socket.id)) {
           console.log(`[R] Grace period expired for ${socket.id} in room ${roomId}, cleaning up`);
+          // Notify remaining player before cleanup
+          const remainingId = room.players.find(id => id !== socket.id);
+          if (remainingId) {
+            io.to(remainingId).emit('opponent-left');
+          }
           cleanupRoom(roomId);
         }
       }, 10000);
