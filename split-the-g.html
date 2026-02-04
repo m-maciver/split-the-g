@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050505">
+  <link rel="manifest" href="manifest.json">
+  <title>Split the G</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/framer-motion@10/dist/framer-motion.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --matte-black: #050505;
+      --cream: #F0EAD6;
+      --gold: #FFD700;
+      --success: #00E054;
+      --silver: #C0C0C0;
+      --red: #FF4444;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+      background: var(--matte-black);
+      color: var(--cream);
+      overflow-x: hidden;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+
+    html {
+      height: -webkit-fill-available;
+    }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-dark {
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Premium Button */
+    .btn-gold {
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+      border: none;
+      border-radius: 16px;
+      padding: 20px 32px;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--matte-black);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 32px rgba(255, 215, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-gold::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+      transform: scale(0);
+      transition: transform 0.5s ease;
+    }
+
+    .btn-gold:active::before {
+      transform: scale(1);
+    }
+
+    .btn-gold:active {
+      transform: scale(0.98);
+    }
+
+    .btn-gold:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Pint Glass Breathing Animation */
+    .pint-breathe {
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% {
+        transform: scale(1) translateY(0);
+        filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.2));
+      }
+      50% {
+        transform: scale(1.05) translateY(-5px);
+        filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.4));
+      }
+    }
+
+    /* Laser Scan */
+    .laser-scan {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--success), transparent);
+      box-shadow: 0 0 20px var(--success);
+      animation: scan 2s ease-in-out;
+    }
+
+    @keyframes scan {
+      0% {
+        top: 0%;
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        top: 100%;
+        opacity: 0;
+      }
+    }
+
+    /* Screen Shake */
+    .shake {
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+      20%, 40%, 60%, 80% { transform: translateX(10px); }
+    }
+
+    /* Confetti */
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: confetti-fall 3s ease-out forwards;
+      z-index: 100;
+    }
+
+    @keyframes confetti-fall {
+      to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    /* Sparkle */
+    .sparkle {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: var(--silver);
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      animation: sparkle-fade 2s ease-out forwards;
+      z-index: 100;
+    }
+
+    @keyframes sparkle-fade {
+      0% {
+        transform: translateY(0) scale(0) rotate(0deg);
+        opacity: 1;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(50vh) scale(1) rotate(180deg);
+        opacity: 0;
+      }
+    }
+
+    /* Safe Area */
+    .safe-top {
+      padding-top: max(env(safe-area-inset-top), 16px);
+    }
+
+    .safe-bottom {
+      padding-bottom: max(env(safe-area-inset-bottom), 24px);
+    }
+
+    /* Viewfinder */
+    .viewfinder-corner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+    }
+
+    .corner-tl {
+      top: 0;
+      left: 0;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .corner-tr {
+      top: 0;
+      right: 0;
+      border-left: none;
+      border-bottom: none;
+    }
+
+    .corner-bl {
+      bottom: 0;
+      left: 0;
+      border-right: none;
+      border-top: none;
+    }
+
+    .corner-br {
+      bottom: 0;
+      right: 0;
+      border-left: none;
+      border-top: none;
+    }
+
+    /* Card Scroll */
+    .card-scroll {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .card-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .card-scroll > * {
+      scroll-snap-align: start;
+      flex-shrink: 0;
+    }
+
+    /* Gold Text */
+    .gold-text {
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    }
+
+    /* Rolling Number */
+    .rolling-number {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Camera Error */
+    .camera-error-icon {
+      font-size: 80px;
+      opacity: 0.5;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { motion, AnimatePresence } = window.Motion;
+
+    // ============ UTILITIES ============
+    const formatCurrency = (amount) => `€${amount.toFixed(2)}`;
+
+    const getBalance = () => {
+      const saved = localStorage.getItem('split-g-balance');
+      return saved ? parseFloat(saved) : 50.00;
+    };
+
+    const setBalance = (amount) => {
+      localStorage.setItem('split-g-balance', amount.toString());
+    };
+
+    const getHighScore = () => {
+      const saved = localStorage.getItem('split-g-highscore');
+      return saved ? parseFloat(saved) : 0;
+    };
+
+    const setHighScore = (score) => {
+      const current = getHighScore();
+      if (score > current) {
+        localStorage.setItem('split-g-highscore', score.toString());
+      }
+    };
+
+    const getGamesPlayed = () => {
+      const saved = localStorage.getItem('split-g-games');
+      return saved ? parseInt(saved) : 0;
+    };
+
+    const incrementGames = () => {
+      const games = getGamesPlayed() + 1;
+      localStorage.setItem('split-g-games', games.toString());
+      return games;
+    };
+
+    // ============ COMPONENTS ============
+
+    function PintGlass() {
+      return (
+        <svg width="120" height="160" viewBox="0 0 120 160" className="pint-breathe mx-auto">
+          <defs>
+            <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(240, 234, 214, 0.1)" />
+              <stop offset="100%" stopColor="rgba(240, 234, 214, 0.02)" />
+            </linearGradient>
+            <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1a1a1a" />
+              <stop offset="100%" stopColor="#000000" />
+            </linearGradient>
+          </defs>
+          {/* Glass */}
+          <path d="M30 20 L25 130 Q25 142 35 142 L85 142 Q95 142 95 130 L90 20 Q90 15 82 15 L38 15 Q30 15 30 20 Z"
+            fill="url(#glassGrad)" stroke="rgba(240, 234, 214, 0.3)" strokeWidth="2" strokeLinecap="round"/>
+          {/* Stout Liquid */}
+          <path d="M31 90 L26 130 Q26 140 35 140 L85 140 Q94 140 94 130 L89 90 Z" fill="url(#liquidGrad)"/>
+          {/* Foam */}
+          <ellipse cx="60" cy="90" rx="32" ry="10" fill="#F0EAD6" opacity="0.95"/>
+          <ellipse cx="60" cy="86" rx="33" ry="8" fill="#F0EAD6" opacity="0.7"/>
+          <ellipse cx="60" cy="83" rx="31" ry="6" fill="#F0EAD6" opacity="0.5"/>
+          {/* Glass Top */}
+          <ellipse cx="60" cy="17" rx="22" ry="5" stroke="rgba(240, 234, 214, 0.3)" strokeWidth="1.5" fill="none"/>
+          {/* Shine */}
+          <path d="M42 25 Q40 80 38 120" stroke="rgba(255,255,255,0.15)" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      );
+    }
+
+    function RollingNumber({ value, duration = 1000 }) {
+      const [display, setDisplay] = useState(0);
+
+      useEffect(() => {
+        let start = 0;
+        const increment = value / (duration / 16);
+        const timer = setInterval(() => {
+          start += increment;
+          if (start >= value) {
+            setDisplay(value);
+            clearInterval(timer);
+          } else {
+            setDisplay(Math.floor(start));
+          }
+        }, 16);
+        return () => clearInterval(timer);
+      }, [value, duration]);
+
+      return <span className="rolling-number">{display}</span>;
+    }
+
+    function Confetti({ color }) {
+      const confetti = Array.from({ length: 50 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        delay: Math.random() * 0.5,
+      }));
+
+      return (
+        <div className="fixed inset-0 pointer-events-none">
+          {confetti.map(c => (
+            <div
+              key={c.id}
+              className="confetti"
+              style={{
+                left: `${c.left}%`,
+                top: '-10px',
+                background: color,
+                animationDelay: `${c.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    function Sparkles() {
+      const sparkles = Array.from({ length: 30 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        delay: Math.random() * 0.5,
+      }));
+
+      return (
+        <div className="fixed inset-0 pointer-events-none">
+          {sparkles.map(s => (
+            <div
+              key={s.id}
+              className="sparkle"
+              style={{
+                left: `${s.left}%`,
+                top: '20%',
+                animationDelay: `${s.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    // ============ MAIN APP ============
+
+    function SplitTheG() {
+      const [screen, setScreen] = useState('home');
+      const [balance, setBalanceState] = useState(getBalance());
+      const [highScore, setHighScoreState] = useState(getHighScore());
+      const [gamesPlayed, setGamesPlayed] = useState(getGamesPlayed());
+      const [timer, setTimer] = useState(60);
+      const [result, setResult] = useState(null);
+      const [cameraError, setCameraError] = useState(false);
+      const [showLaser, setShowLaser] = useState(false);
+      const [showConfetti, setShowConfetti] = useState(false);
+      const [showSparkles, setShowSparkles] = useState(false);
+      const [shouldShake, setShouldShake] = useState(false);
+
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+      const timerRef = useRef(null);
+      const streamRef = useRef(null);
+
+      useEffect(() => {
+        setBalance(balance);
+      }, [balance]);
+
+      const startCamera = async () => {
+        setCameraError(false);
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            }
+          });
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+          }
+        } catch (err) {
+          console.error('Camera error:', err);
+          setCameraError(true);
+        }
+      };
+
+      const stopCamera = () => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+      };
+
+      const captureImage = () => {
+        if (!videoRef.current || !canvasRef.current) return null;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = videoRef.current.videoWidth || 640;
+        canvas.height = videoRef.current.videoHeight || 480;
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.95);
+      };
+
+      const checkImageQuality = (imageData) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const pixels = imageData.data;
+
+        // Check if image is too dark
+        let totalBrightness = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+          totalBrightness += lum;
+        }
+        const avgBrightness = totalBrightness / (pixels.length / 4);
+
+        return avgBrightness > 20; // Minimum brightness threshold
+      };
+
+      const analyzePint = (imageData) => {
+        return new Promise((resolve) => {
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.src = imageData;
+
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const { width, height } = canvas;
+            const imageDataObj = ctx.getImageData(0, 0, width, height);
+
+            // Check image quality
+            const isGoodQuality = checkImageQuality(imageDataObj);
+            if (!isGoodQuality) {
+              resolve({ error: 'Image too dark. Please retake in better lighting.' });
+              return;
+            }
+
+            const centerX = Math.floor(width / 2);
+            const targetY = Math.floor(height / 2);
+            const pixels = imageDataObj.data;
+
+            // Find liquid level (dark to light transition)
+            let liquidY = height;
+            for (let y = height - 1; y >= 0; y--) {
+              const i = (y * width + centerX) * 4;
+              const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+              if (lum > 100) {
+                liquidY = y;
+                break;
+              }
+            }
+
+            const distance = Math.abs(liquidY - targetY);
+            const maxDistance = height * 0.15;
+            const accuracy = Math.max(0, Math.min(100, 100 - (distance / maxDistance) * 100));
+
+            resolve({ liquidY, targetY, accuracy: Math.round(accuracy), height });
+          };
+        });
+      };
+
+      const handlePlay = () => {
+        if (balance < 5) {
+          alert('Not enough balance! Need €5 to play.');
+          return;
+        }
+        setBalanceState(balance - 5);
+        setScreen('calibrate');
+      };
+
+      const handleCalibrate = () => {
+        captureImage();
+        stopCamera();
+        setTimer(60);
+        setScreen('drink');
+        timerRef.current = setInterval(() => {
+          setTimer(t => {
+            if (t <= 0.01) {
+              clearInterval(timerRef.current);
+              return 0;
+            }
+            return t - 0.01;
+          });
+        }, 10);
+      };
+
+      const handleVerify = () => {
+        clearInterval(timerRef.current);
+        setScreen('verify');
+      };
+
+      const handleAnalyze = async () => {
+        const img = captureImage();
+        stopCamera();
+
+        // Show laser scan
+        setShowLaser(true);
+
+        // Analyze after laser completes
+        setTimeout(async () => {
+          const analysis = await analyzePint(img);
+          setShowLaser(false);
+
+          // Handle quality errors
+          if (analysis.error) {
+            alert(analysis.error);
+            setScreen('verify');
+            startCamera();
+            return;
+          }
+
+          let verdict, theme, winnings;
+          if (analysis.accuracy >= 97) {
+            verdict = 'GUINNESS GOD';
+            theme = 'god';
+            winnings = 10;
+            setBalanceState(balance + 10);
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+          } else if (analysis.accuracy >= 90) {
+            verdict = 'ROBBED';
+            theme = 'robbed';
+            winnings = 0;
+            setShowSparkles(true);
+            setTimeout(() => setShowSparkles(false), 2500);
+          } else {
+            verdict = 'SHOCKING';
+            theme = 'shocking';
+            winnings = 0;
+            setShouldShake(true);
+            setTimeout(() => setShouldShake(false), 500);
+          }
+
+          setHighScore(analysis.accuracy);
+          const games = incrementGames();
+          setGamesPlayed(games);
+          setResult({ ...analysis, verdict, theme, winnings, image: img });
+          setScreen('result');
+        }, 2000);
+      };
+
+      const handleReset = () => {
+        setResult(null);
+        setHighScoreState(getHighScore());
+        setScreen('home');
+      };
+
+      const handleRetry = () => {
+        setScreen('verify');
+        startCamera();
+      };
+
+      useEffect(() => {
+        if (screen === 'calibrate' || screen === 'verify') {
+          startCamera();
+        }
+        return () => {
+          if (screen !== 'calibrate' && screen !== 'verify') {
+            stopCamera();
+          }
+        };
+      }, [screen]);
+
+      useEffect(() => {
+        return () => {
+          stopCamera();
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, []);
+
+      return (
+        <div className="min-h-screen" style={{ background: '#050505' }}>
+          <canvas ref={canvasRef} className="hidden" />
+
+          {showConfetti && <Confetti color="#FFD700" />}
+          {showSparkles && <Sparkles />}
+
+          <AnimatePresence mode="wait">
+            {/* HOME */}
+            {screen === 'home' && (
+              <motion.div
+                key="home"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="h-screen flex flex-col safe-top safe-bottom px-6 py-4 overflow-hidden"
+              >
+                <div className="flex flex-col max-w-md mx-auto w-full h-full justify-between">
+                  {/* Header */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-4"
+                  >
+                    <h1 className="text-3xl font-black tracking-wider gold-text mb-1">
+                      SPLIT THE G
+                    </h1>
+                    <p className="text-xs opacity-60 tracking-wide">PREMIUM GUINNESS CHALLENGE</p>
+                  </motion.div>
+
+                  {/* Balance Card */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="glass rounded-2xl p-4 mb-4"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs tracking-wider opacity-60">YOUR BALANCE</span>
+                      <div className="flex gap-2">
+                        <span className="glass-dark px-2 py-1 rounded-full text-xs font-bold" style={{ color: '#00E054' }}>
+                          ★ {highScore}%
+                        </span>
+                        <span className="glass-dark px-2 py-1 rounded-full text-xs font-bold">
+                          {gamesPlayed} GAMES
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-4xl font-black gold-text">
+                      {formatCurrency(balance)}
+                    </div>
+                  </motion.div>
+
+                  {/* Instruction Cards - Vertical Stack */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-2 mb-4"
+                  >
+                    <div className="glass rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-2xl">💰</div>
+                      <div className="flex-1">
+                        <div className="font-bold text-sm">Stake €5 to Play</div>
+                        <div className="text-xs opacity-60">Place your bet and start</div>
+                      </div>
+                    </div>
+                    <div className="glass rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-2xl">📸</div>
+                      <div className="flex-1">
+                        <div className="font-bold text-sm">Snap → Drink → Snap</div>
+                        <div className="text-xs opacity-60">Photo fresh pint, drink, verify</div>
+                      </div>
+                    </div>
+                    <div className="glass rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-2xl">🏆</div>
+                      <div className="flex-1">
+                        <div className="font-bold text-sm">97% = Double Money</div>
+                        <div className="text-xs opacity-60">Hit 97%+ to win €10</div>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Pint Glass Hero - Compact */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex items-center justify-center py-2"
+                  >
+                    <div style={{ transform: 'scale(0.5)' }}>
+                      <PintGlass />
+                    </div>
+                  </motion.div>
+
+                  {/* Play Button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <button
+                      onClick={handlePlay}
+                      disabled={balance < 5}
+                      className="btn-gold w-full"
+                      style={{ padding: '16px 32px', fontSize: '16px' }}
+                    >
+                      STAKE €5 TO PLAY
+                    </button>
+                    {balance < 5 && (
+                      <p className="text-center text-xs mt-2 opacity-60">Insufficient balance</p>
+                    )}
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* CALIBRATE */}
+            {screen === 'calibrate' && (
+              <motion.div
+                key="calibrate"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="min-h-screen relative"
+              >
+                {cameraError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                    <div className="text-center px-6">
+                      <div className="camera-error-icon mb-6">📷</div>
+                      <h2 className="text-2xl font-bold mb-4">Camera Access Needed</h2>
+                      <p className="mb-6 opacity-70">Please allow camera access to play Split the G</p>
+                      <button onClick={startCamera} className="btn-gold">
+                        Enable Camera
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                    <div className="absolute inset-0 bg-black/10" />
+
+                    {/* Silicon Valley Viewfinder */}
+                    <div className="absolute inset-0 flex items-center justify-center p-12">
+                      <div className="relative w-full max-w-sm aspect-square">
+                        <div className="viewfinder-corner corner-tl" />
+                        <div className="viewfinder-corner corner-tr" />
+                        <div className="viewfinder-corner corner-bl" />
+                        <div className="viewfinder-corner corner-br" />
+
+                        {/* Center Crosshair */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="relative">
+                            <div className="absolute w-8 h-0.5 bg-white/80 -left-10 top-1/2 -translate-y-1/2" />
+                            <div className="absolute w-8 h-0.5 bg-white/80 -right-10 top-1/2 -translate-y-1/2" />
+                            <div className="absolute h-8 w-0.5 bg-white/80 left-1/2 -translate-x-1/2 -top-10" />
+                            <div className="absolute h-8 w-0.5 bg-white/80 left-1/2 -translate-x-1/2 -bottom-10" />
+                            <div className="w-2 h-2 rounded-full bg-white/80" />
+                          </div>
+                        </div>
+
+                        {/* Target Line */}
+                        <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="absolute top-0 left-0 right-0 safe-top p-6">
+                      <div className="glass-dark rounded-2xl px-6 py-4 inline-block">
+                        <p className="font-bold text-sm">📸 Center the Fresh Pint's G Logo</p>
+                        <p className="text-xs opacity-70 mt-1">Align with the target line</p>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="absolute bottom-0 left-0 right-0 safe-bottom p-6">
+                      <button onClick={handleCalibrate} className="btn-gold w-full">
+                        CAPTURE FRESH PINT
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* DRINK */}
+            {screen === 'drink' && (
+              <motion.div
+                key="drink"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="min-h-screen flex items-center justify-center p-6"
+                style={{ background: 'linear-gradient(135deg, #F0EAD6 0%, #E5D5C0 100%)' }}
+              >
+                <div className="text-center max-w-md">
+                  <motion.div
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                  >
+                    <div className="text-9xl font-black mb-6" style={{ color: '#050505' }}>
+                      {timer.toFixed(1)}
+                    </div>
+                    <div className="text-2xl font-bold mb-2" style={{ color: '#050505' }}>
+                      DRINK NOW
+                    </div>
+                    <div className="text-lg opacity-60 mb-12" style={{ color: '#050505' }}>
+                      Stop exactly at the G logo
+                    </div>
+                  </motion.div>
+
+                  <button
+                    onClick={handleVerify}
+                    className="btn-gold px-16"
+                  >
+                    I'M DONE!
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* VERIFY */}
+            {screen === 'verify' && (
+              <motion.div
+                key="verify"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="min-h-screen relative"
+              >
+                {cameraError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                    <div className="text-center px-6">
+                      <div className="camera-error-icon mb-6">📷</div>
+                      <h2 className="text-2xl font-bold mb-4">Camera Access Needed</h2>
+                      <p className="mb-6 opacity-70">Please allow camera access to verify your result</p>
+                      <button onClick={startCamera} className="btn-gold">
+                        Enable Camera
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                    <div className="absolute inset-0 bg-black/10" />
+
+                    {/* Viewfinder */}
+                    <div className="absolute inset-0 flex items-center justify-center p-12">
+                      <div className="relative w-full max-w-sm aspect-square">
+                        <div className="viewfinder-corner corner-tl" />
+                        <div className="viewfinder-corner corner-tr" />
+                        <div className="viewfinder-corner corner-bl" />
+                        <div className="viewfinder-corner corner-br" />
+
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="relative">
+                            <div className="absolute w-8 h-0.5 bg-white/80 -left-10 top-1/2 -translate-y-1/2" />
+                            <div className="absolute w-8 h-0.5 bg-white/80 -right-10 top-1/2 -translate-y-1/2" />
+                            <div className="absolute h-8 w-0.5 bg-white/80 left-1/2 -translate-x-1/2 -top-10" />
+                            <div className="absolute h-8 w-0.5 bg-white/80 left-1/2 -translate-x-1/2 -bottom-10" />
+                            <div className="w-2 h-2 rounded-full bg-white/80" />
+                          </div>
+                        </div>
+
+                        <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                      </div>
+                    </div>
+
+                    <div className="absolute top-0 left-0 right-0 safe-top p-6">
+                      <div className="glass-dark rounded-2xl px-6 py-4 inline-block">
+                        <p className="font-bold text-sm">🔍 Show Your Split G</p>
+                        <p className="text-xs opacity-70 mt-1">Align your result with the target</p>
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 safe-bottom p-6">
+                      <button
+                        onClick={handleAnalyze}
+                        className="btn-gold w-full"
+                        style={{ background: 'linear-gradient(135deg, #00E054 0%, #00B043 100%)' }}
+                      >
+                        VERIFY RESULT
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* RESULT */}
+            {screen === 'result' && result && (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={`min-h-screen flex flex-col safe-top safe-bottom p-6 ${shouldShake ? 'shake' : ''}`}
+                style={{ background: '#050505' }}
+              >
+                <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
+                  {/* Result Image with Laser */}
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="relative rounded-3xl overflow-hidden"
+                  >
+                    <img src={result.image} alt="Result" className="w-full" />
+
+                    {showLaser && <div className="laser-scan" />}
+
+                    {/* Target Line (Green) */}
+                    <motion.div
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      transition={{ delay: 0.5, duration: 0.3 }}
+                      className="absolute left-0 right-0 h-1"
+                      style={{
+                        top: '50%',
+                        background: 'var(--success)',
+                        boxShadow: '0 0 20px var(--success)',
+                      }}
+                    >
+                      <div className="absolute right-3 -top-7 glass-dark px-3 py-1 rounded-lg text-xs font-bold" style={{ color: '#00E054' }}>
+                        TARGET
+                      </div>
+                    </motion.div>
+
+                    {/* Liquid Line (Red/Green based on result) */}
+                    <motion.div
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      transition={{ delay: 1, duration: 0.3 }}
+                      className="absolute left-0 right-0 h-1"
+                      style={{
+                        top: `${(result.liquidY / result.height) * 100}%`,
+                        background: result.theme === 'god' ? 'var(--success)' : 'var(--red)',
+                        boxShadow: result.theme === 'god' ? '0 0 20px var(--success)' : '0 0 20px var(--red)',
+                      }}
+                    >
+                      <div
+                        className="absolute left-3 -top-7 glass-dark px-3 py-1 rounded-lg text-xs font-bold"
+                        style={{ color: result.theme === 'god' ? '#00E054' : '#FF4444' }}
+                      >
+                        YOU
+                      </div>
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Score Card */}
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 1.5, type: 'spring', stiffness: 200 }}
+                    className="glass rounded-3xl p-8 text-center"
+                  >
+                    <div
+                      className="text-8xl font-black mb-4"
+                      style={{
+                        color: result.theme === 'god' ? '#FFD700' : result.theme === 'robbed' ? '#C0C0C0' : '#FF4444',
+                        textShadow: `0 0 40px ${result.theme === 'god' ? 'rgba(255,215,0,0.6)' : result.theme === 'robbed' ? 'rgba(192,192,192,0.4)' : 'rgba(255,68,68,0.4)'}`,
+                      }}
+                    >
+                      <RollingNumber value={result.accuracy} duration={1000} />%
+                    </div>
+                    <div className="text-3xl font-black mb-6 tracking-wider" style={{ color: result.theme === 'god' ? '#FFD700' : result.theme === 'robbed' ? '#C0C0C0' : '#FF4444' }}>
+                      {result.verdict}
+                    </div>
+                    <div className="text-5xl font-black" style={{ color: result.winnings > 0 ? '#00E054' : '#FF4444' }}>
+                      {result.winnings > 0 ? `+${formatCurrency(result.winnings)}` : '−€5.00'}
+                    </div>
+                  </motion.div>
+
+                  {/* New Balance */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 2 }}
+                    className="glass rounded-3xl p-6 text-center"
+                  >
+                    <div className="text-xs tracking-wider opacity-60 mb-2">NEW BALANCE</div>
+                    <div className="text-5xl font-black gold-text">
+                      {formatCurrency(balance)}
+                    </div>
+                  </motion.div>
+
+                  {/* Actions */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 2.5 }}
+                    className="space-y-3"
+                  >
+                    <button onClick={handleReset} className="btn-gold w-full">
+                      PLAY AGAIN
+                    </button>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<SplitTheG />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0B1A0E">
+  <link rel="manifest" href="manifest.json">
+  <title>Split the G</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@10/dist/framer-motion.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-primary: #0B1A0E;
+      --bg-elevated: #132A18;
+      --bg-surface: #1A3520;
+      --cream: #F5E6C8;
+      --gold: #D4A843;
+      --emerald: #34D399;
+      --text-primary: #F0EBE0;
+      --text-secondary: #7C9A82;
+      --accent-red: #EF4444;
+      --border: rgba(212,168,67,0.12);
+      --glow: rgba(52,211,153,0.15);
+    }
+
+    @property --border-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    html {
+      height: -webkit-fill-available;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+
+    .safe-top { padding-top: max(env(safe-area-inset-top), 16px); }
+    .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 24px); }
+
+    /* ---- Buttons ---- */
+    .btn-primary {
+      background: linear-gradient(135deg, #D4A843, #E0BE6A);
+      color: #0B1A0E;
+      border: none;
+      border-radius: 14px;
+      height: 56px;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    }
+    .btn-primary:active { transform: scale(0.98); box-shadow: 0 0 24px rgba(212,168,67,0.5); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary-light {
+      background: var(--cream);
+      color: #0B1A0E;
+      border: none;
+      border-radius: 14px;
+      height: 56px;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+    }
+    .btn-primary-light:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-primary-light:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-success {
+      background: linear-gradient(135deg, #34D399, #4AE8AF);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      height: 56px;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    }
+    .btn-success:active { transform: scale(0.98); box-shadow: 0 0 24px rgba(52,211,153,0.5); }
+
+    .btn-text {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 8px 16px;
+      transition: border-color 0.15s ease;
+    }
+    .btn-text:hover { border-color: var(--gold); }
+
+    /* ---- Typography ---- */
+    .t-hero { font-family: 'Space Mono', monospace; font-size: 80px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    .t-title { font-size: 24px; font-weight: 700; }
+    .t-body { font-size: 16px; font-weight: 500; }
+    .t-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
+    .t-small { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+
+    /* ---- Cards ---- */
+    .card {
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: rgba(26,53,32,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .card-dark {
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: rgba(26,53,32,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* ---- Layout ---- */
+    .layout {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+
+    /* ---- Pulsing dots ---- */
+    .pulsing-dots { display: flex; gap: 6px; align-items: center; justify-content: center; }
+    .pulsing-dots span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--emerald);
+      animation: dot-pulse 1.4s ease-in-out infinite;
+    }
+    .pulsing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .pulsing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    .pulsing-dots-light span { background: var(--emerald); }
+
+    /* ---- Scan line ---- */
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+      box-shadow: 0 0 20px var(--emerald);
+      animation: scan-anim 1.8s ease-in-out;
+    }
+    @keyframes scan-anim {
+      0% { top: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    /* ---- Confetti ---- */
+    .confetti-particle {
+      position: fixed;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      animation: confetti-fall 2s ease-out forwards;
+      z-index: 100;
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ---- Shutter button ---- */
+    .shutter-btn {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: 4px solid var(--gold);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+    }
+    .shutter-btn:active { transform: scale(0.92); box-shadow: 0 0 24px rgba(212,168,67,0.5); }
+    .shutter-btn-inner {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--cream);
+    }
+
+    /* ---- Viewfinder ---- */
+    .viewfinder-frame {
+      position: relative;
+    }
+    .viewfinder-corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--gold);
+      border-style: solid;
+    }
+    .vc-tl { top: 0; left: 0; border-width: 3px 0 0 3px; }
+    .vc-tr { top: 0; right: 0; border-width: 3px 3px 0 0; }
+    .vc-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+    .vc-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+    .viewfinder-guide {
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 10%, var(--emerald) 30%, var(--emerald) 70%, transparent 90%);
+      box-shadow: 0 0 10px rgba(52,211,153,0.3);
+    }
+
+    /* ---- Video ---- */
+    .video-container {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+    }
+    .video-container video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ---- PIP video ---- */
+    .pip-video {
+      position: absolute;
+      top: 16px; right: 16px;
+      width: 100px; height: 100px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      z-index: 10;
+    }
+    .pip-video video { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      display: flex; justify-content: center;
+      padding: max(env(safe-area-inset-top), 16px) 24px 16px;
+    }
+    .toast-inner {
+      background: rgba(19,42,24,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: var(--cream);
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .toast-error .toast-inner {
+      background: rgba(239,68,68,0.15);
+      border-left-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    /* ---- Timer pulse ---- */
+    @keyframes timer-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    .timer-pulse { animation: timer-pulse 0.5s ease-in-out infinite; }
+
+    /* ---- Winner glow ---- */
+    .winner-glow {
+      box-shadow: 0 0 30px rgba(52, 211, 153, 0.4), 0 0 60px rgba(52, 211, 153, 0.2);
+      border: 2px solid var(--emerald) !important;
+    }
+
+    /* ---- Instruction pill ---- */
+    .instruction-pill {
+      background: rgba(19,42,24,0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--gold);
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+
+    /* ---- Ready badge ---- */
+    .ready-badge {
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .ready-badge-on {
+      background: var(--emerald);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(52,211,153,0.4);
+      animation: ready-glow 1.5s ease-in-out infinite;
+    }
+    .ready-badge-off {
+      background: rgba(26,53,32,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    @keyframes ready-glow {
+      0%, 100% { box-shadow: 0 0 12px rgba(52,211,153,0.4); }
+      50% { box-shadow: 0 0 20px rgba(52,211,153,0.6); }
+    }
+
+    /* ---- Pint float animation ---- */
+    .pint-float {
+      animation: pint-float 3s ease-in-out infinite;
+    }
+    @keyframes pint-float {
+      0%, 100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 15px rgba(212,168,67,0.3));
+      }
+      50% {
+        transform: translateY(-8px);
+        filter: drop-shadow(0 0 25px rgba(212,168,67,0.5));
+      }
+    }
+
+    /* ---- Search ring spinner ---- */
+    .search-ring {
+      display: inline-block;
+      animation: search-spin 1.5s linear infinite;
+    }
+    @keyframes search-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Animated gradient border ---- */
+    @keyframes rotate-border {
+      to { --border-angle: 360deg; }
+    }
+    .animated-gold-border {
+      position: relative;
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(26,53,32,0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: none;
+    }
+    .animated-gold-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 2px solid transparent;
+      background: conic-gradient(from var(--border-angle, 0deg), #D4A843, #34D399, #D4A843) border-box;
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: rotate-border 3s linear infinite;
+      pointer-events: none;
+    }
+
+    /* ---- Ambient particles ---- */
+    .ambient-particle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(212,168,67,0.3);
+      bottom: -10px;
+      animation: particle-drift linear infinite;
+    }
+    @keyframes particle-drift {
+      0% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 0.5; }
+      90% { opacity: 0.5; }
+      100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Noise texture overlay -->
+  <svg style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10000;opacity:0.035">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
+  </svg>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    const { motion, AnimatePresence } = window.Motion;
+
+    // ============ CONFIG ============
+    const ICE_SERVERS = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    const springConfig = { type: "spring", stiffness: 300, damping: 30 };
+
+    // ============ UTILITIES ============
+
+    // Haptic feedback
+    function haptic(pattern = 50) {
+      try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) {}
+    }
+
+    // Web Audio API — synthesized sound effects
+    let _audioCtx = null;
+    function getAudioCtx() {
+      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_audioCtx.state === 'suspended') _audioCtx.resume();
+      return _audioCtx;
+    }
+    function playTone(freq, duration, type = 'sine', vol = 0.15) {
+      try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+    const sfx = {
+      tick: () => playTone(800, 0.06),
+      shutter: () => { playTone(1200, 0.05, 'square', 0.08); playTone(900, 0.08, 'sine', 0.06); },
+      go: () => { playTone(523, 0.1); setTimeout(() => playTone(1047, 0.15), 100); },
+      win: () => { playTone(784, 0.15); setTimeout(() => playTone(1047, 0.2), 150); },
+      lose: () => playTone(300, 0.3, 'sine', 0.1),
+    };
+
+    // Accuracy → color
+    function getAccuracyColor(acc) {
+      if (acc >= 80) return '#34D399';
+      if (acc >= 50) return '#D4A843';
+      if (acc >= 25) return '#E8943A';
+      return '#EF4444';
+    }
+
+    // ============ CUSTOM HOOKS ============
+
+    function useSocket() {
+      const [socket, setSocket] = useState(null);
+      const [connected, setConnected] = useState(false);
+
+      useEffect(() => {
+        const s = io();
+        setSocket(s);
+        s.on('connect', () => setConnected(true));
+        s.on('disconnect', () => setConnected(false));
+        return () => s.close();
+      }, []);
+
+      return { socket, connected };
+    }
+
+    function useStreak() {
+      const [streak, setStreak] = useState(() => {
+        try { return parseInt(localStorage.getItem('stg-streak') || '0', 10); } catch (e) { return 0; }
+      });
+      const recordWin = useCallback(() => {
+        setStreak(s => {
+          const n = s + 1;
+          try { localStorage.setItem('stg-streak', String(n)); } catch (e) {}
+          return n;
+        });
+      }, []);
+      const resetStreak = useCallback(() => {
+        setStreak(0);
+        try { localStorage.setItem('stg-streak', '0'); } catch (e) {}
+      }, []);
+      return { streak, recordWin, resetStreak };
+    }
+
+    function useWebRTC(socket, opponentId, isInitiator) {
+      const pcRef = useRef(null);
+      const localStreamRef = useRef(null);
+      const [remoteStream, setRemoteStream] = useState(null);
+      const [localStream, setLocalStream] = useState(null);
+      const [connectionState, setConnectionState] = useState('new');
+
+      const cleanup = useCallback(() => {
+        if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => t.stop());
+          localStreamRef.current = null;
+        }
+        setLocalStream(null);
+        setRemoteStream(null);
+        setConnectionState('new');
+      }, []);
+
+      const start = useCallback(async () => {
+        if (!socket || !opponentId) return;
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: true
+          });
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+
+          const pc = new RTCPeerConnection(ICE_SERVERS);
+          pcRef.current = pc;
+
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+          pc.ontrack = (e) => {
+            setRemoteStream(e.streams[0]);
+            setConnectionState('connected');
+          };
+          pc.onicecandidate = (e) => {
+            if (e.candidate) socket.emit('webrtc-ice-candidate', { candidate: e.candidate });
+          };
+          pc.onconnectionstatechange = () => {
+            if (pc.connectionState) setConnectionState(pc.connectionState);
+          };
+
+          if (isInitiator) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('webrtc-offer', { offer });
+          }
+        } catch (err) {
+          setConnectionState('failed');
+        }
+      }, [socket, opponentId, isInitiator]);
+
+      useEffect(() => {
+        if (!socket) return;
+        const onOffer = async (data) => {
+          const pc = pcRef.current;
+          if (!pc) return;
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit('webrtc-answer', { answer });
+        };
+        const onAnswer = async (data) => {
+          const pc = pcRef.current;
+          if (!pc) return;
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        };
+        const onIce = async (data) => {
+          const pc = pcRef.current;
+          if (!pc) return;
+          try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
+        };
+        socket.on('webrtc-offer', onOffer);
+        socket.on('webrtc-answer', onAnswer);
+        socket.on('webrtc-ice-candidate', onIce);
+        return () => {
+          socket.off('webrtc-offer', onOffer);
+          socket.off('webrtc-answer', onAnswer);
+          socket.off('webrtc-ice-candidate', onIce);
+        };
+      }, [socket]);
+
+      return { localStream, remoteStream, connectionState, start, cleanup };
+    }
+
+    function useCamera(facingMode = 'environment') {
+      const streamRef = useRef(null);
+      const [stream, setStream] = useState(null);
+      const [error, setError] = useState(false);
+
+      const start = useCallback(async () => {
+        setError(false);
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          });
+          streamRef.current = s;
+          setStream(s);
+          return s;
+        } catch (err) {
+          setError(true);
+          return null;
+        }
+      }, [facingMode]);
+
+      const stop = useCallback(() => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+        setStream(null);
+      }, []);
+
+      const capture = useCallback((videoEl, canvas) => {
+        if (!videoEl || !canvas) return null;
+        const ctx = canvas.getContext('2d');
+        canvas.width = videoEl.videoWidth || 640;
+        canvas.height = videoEl.videoHeight || 480;
+        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.95);
+      }, []);
+
+      useEffect(() => { return () => { stop(); }; }, [stop]);
+
+      return { stream, error, start, stop, capture };
+    }
+
+    function usePintAnalysis() {
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+      const analyze = useCallback((imageData, canvas) => {
+        return new Promise((resolve) => {
+          setIsAnalyzing(true);
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.src = imageData;
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            const { width, height } = canvas;
+            const imageDataObj = ctx.getImageData(0, 0, width, height);
+            const pixels = imageDataObj.data;
+            const centerX = Math.floor(width / 2);
+            const targetY = Math.floor(height / 2);
+
+            let liquidY = height;
+            for (let y = height - 1; y >= 0; y--) {
+              const i = (y * width + centerX) * 4;
+              const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+              if (lum > 100) { liquidY = y; break; }
+            }
+
+            const distance = Math.abs(liquidY - targetY);
+            const maxDistance = height * 0.15;
+            const accuracy = Math.max(0, Math.min(100, 100 - (distance / maxDistance) * 100));
+            setIsAnalyzing(false);
+            resolve({ liquidY, targetY, accuracy: Math.round(accuracy), height });
+          };
+          img.onerror = () => {
+            setIsAnalyzing(false);
+            resolve({ accuracy: 0, liquidY: 0, targetY: 0, height: 0 });
+          };
+        });
+      }, []);
+
+      return { analyze, isAnalyzing };
+    }
+
+    // ============ SHARED COMPONENTS ============
+
+    function PulsingDots({ light }) {
+      return (
+        <div className={`pulsing-dots ${light ? 'pulsing-dots-light' : ''}`}>
+          <span /><span /><span />
+        </div>
+      );
+    }
+
+    function SearchRing() {
+      return (
+        <div className="search-ring">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(52,211,153,0.15)" strokeWidth="3" />
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#34D399" strokeWidth="3"
+              strokeDasharray="50 114" strokeLinecap="round" />
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#D4A843" strokeWidth="3"
+              strokeDasharray="15 149" strokeLinecap="round" strokeDashoffset="-50" />
+          </svg>
+        </div>
+      );
+    }
+
+    function TimerArc({ progress }) {
+      const radius = 58;
+      const circumference = 2 * Math.PI * radius;
+      const offset = circumference * (1 - progress);
+      const color = progress > 0.33 ? '#34D399' : progress > 0.17 ? '#D4A843' : '#EF4444';
+
+      return (
+        <svg width="160" height="160" viewBox="0 0 128 128"
+          style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }}>
+          <circle cx="64" cy="64" r={radius} fill="none" stroke="rgba(52,211,153,0.08)" strokeWidth="2.5" />
+          <circle cx="64" cy="64" r={radius} fill="none"
+            stroke={color}
+            strokeWidth="2.5"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.1s linear, stroke 1s ease' }} />
+        </svg>
+      );
+    }
+
+    function AmbientParticles() {
+      return (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          {[0,1,2,3,4,5].map(i => (
+            <div key={i} className="ambient-particle" style={{
+              left: `${10 + i * 16}%`,
+              width: 3 + (i % 3),
+              height: 3 + (i % 3),
+              animationDelay: `${i * 1.2}s`,
+              animationDuration: `${6 + i * 1.5}s`,
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    function Toast({ message, type = 'info', visible }) {
+      return (
+        <AnimatePresence>
+          {visible && (
+            <motion.div
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              transition={springConfig}
+              className={`toast ${type === 'error' ? 'toast-error' : ''}`}
+            >
+              <div className="toast-inner">{message}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      );
+    }
+
+    function VideoFeed({ stream, muted = false, mirrored = false, style, className = '' }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (ref.current && stream) ref.current.srcObject = stream;
+      }, [stream]);
+      return (
+        <video
+          ref={ref}
+          autoPlay playsInline muted={muted}
+          style={{ transform: mirrored ? 'scaleX(-1)' : 'none', ...style }}
+          className={className}
+        />
+      );
+    }
+
+    function ShutterButton({ onClick, disabled }) {
+      return (
+        <button className="shutter-btn" onClick={onClick} disabled={disabled}>
+          <div className="shutter-btn-inner" />
+        </button>
+      );
+    }
+
+    function ConfettiBurst() {
+      const particles = useMemo(() =>
+        Array.from({ length: 20 }, (_, i) => ({
+          id: i,
+          left: 30 + Math.random() * 40,
+          delay: Math.random() * 0.4,
+          color: ['#34D399', '#D4A843', '#F5E6C8', '#34D399'][i % 4],
+          rotation: Math.random() * 360,
+        })), []);
+      return (
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 100 }}>
+          {particles.map(p => (
+            <div key={p.id} className="confetti-particle" style={{
+              left: `${p.left}%`, top: '-10px', background: p.color,
+              animationDelay: `${p.delay}s`, transform: `rotate(${p.rotation}deg)`
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    function RollingNumber({ value, duration = 1000 }) {
+      const [display, setDisplay] = useState(0);
+      useEffect(() => {
+        if (value === null || value === undefined) return;
+        let start = 0;
+        const inc = value / (duration / 16);
+        const timer = setInterval(() => {
+          start += inc;
+          if (start >= value) { setDisplay(value); clearInterval(timer); }
+          else setDisplay(Math.floor(start));
+        }, 16);
+        return () => clearInterval(timer);
+      }, [value, duration]);
+      return <span style={{ fontFamily: "'Space Mono', monospace", fontVariantNumeric: 'tabular-nums' }}>{display}</span>;
+    }
+
+    function PintIcon() {
+      return (
+        <div className="pint-float">
+          <svg width="64" height="88" viewBox="0 0 120 160" style={{ display: 'block', margin: '0 auto' }}>
+            <path d="M30 20 L25 130 Q25 142 35 142 L85 142 Q95 142 95 130 L90 20 Q90 15 82 15 L38 15 Q30 15 30 20 Z"
+              fill="none" stroke="#D4A843" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M31 90 L26 130 Q26 140 35 140 L85 140 Q94 140 94 130 L89 90 Z" fill="#1C0F00"/>
+            <ellipse cx="60" cy="90" rx="32" ry="10" fill="#F5E6C8" opacity="0.95"/>
+            <ellipse cx="60" cy="17" rx="22" ry="5" stroke="#D4A843" strokeWidth="1.5" fill="none"/>
+          </svg>
+        </div>
+      );
+    }
+
+    // ============ SCREEN COMPONENTS ============
+
+    function LandingScreen({ onStart, streak }) {
+      return (
+        <motion.div
+          key="landing"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}
+          className="safe-top safe-bottom"
+        >
+          <AmbientParticles />
+          <div className="layout" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <PintIcon />
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.04em', color: 'var(--cream)', textAlign: 'center' }}>
+              SPLIT THE G
+            </h1>
+            <div style={{ width: 48, height: 3, background: 'var(--emerald)', borderRadius: 2, margin: '4px auto 0' }} />
+            <p style={{ textAlign: 'center', color: 'var(--gold)', fontSize: 14, fontWeight: 600, letterSpacing: '0.05em', marginTop: 8 }}>The Guinness Challenge</p>
+            {streak > 0 && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 12px', borderRadius: 100,
+                background: 'rgba(52,211,153,0.1)',
+                border: '1px solid rgba(52,211,153,0.2)',
+                color: '#34D399', fontSize: 12, fontWeight: 700,
+                fontFamily: "'Space Mono', monospace",
+                marginTop: 4
+              }}>
+                {streak} WIN STREAK
+              </div>
+            )}
+            <div style={{ height: 32 }} />
+            <button className="btn-primary" onClick={onStart}>Get Started</button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function CaptureScreen({ mode, onCapture, onCancel, capturedImage, isScanning, analysisResult }) {
+      const videoRef = useRef(null);
+      const camera = useCamera('environment');
+      const [ready, setReady] = useState(false);
+      const [showFlash, setShowFlash] = useState(false);
+
+      useEffect(() => {
+        camera.start();
+        return () => camera.stop();
+      }, []);
+
+      useEffect(() => {
+        if (videoRef.current && camera.stream) {
+          videoRef.current.srcObject = camera.stream;
+          videoRef.current.onloadedmetadata = () => setReady(true);
+        }
+      }, [camera.stream]);
+
+      const instruction = mode === 'full-pint' ? 'Photograph your full pint' : 'Show your result';
+
+      const handleShutter = useCallback(() => {
+        setShowFlash(true);
+        haptic(40);
+        sfx.shutter();
+        setTimeout(() => setShowFlash(false), 150);
+        const canvas = document.createElement('canvas');
+        const img = camera.capture(videoRef.current, canvas);
+        if (img) onCapture(img);
+      }, [camera, onCapture]);
+
+      if (capturedImage) {
+        return (
+          <motion.div key="capture-result-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={springConfig}
+            style={{ minHeight: '100vh', background: '#000', position: 'relative' }}>
+            <img src={capturedImage} alt="Captured" style={{ width: '100%', height: '100vh', objectFit: 'cover' }} />
+            {isScanning && <div className="scan-line" />}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0 }} className="safe-top">
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                <div className="instruction-pill">Analyzing...</div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      }
+
+      return (
+        <motion.div
+          key="capture"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: '#000', position: 'relative' }}
+        >
+          {/* Camera flash overlay */}
+          {showFlash && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', zIndex: 20, pointerEvents: 'none' }} />}
+
+          {camera.error ? (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--cream)', padding: 24, textAlign: 'center' }}>
+              <div>
+                <p className="t-title" style={{ color: 'var(--cream)', marginBottom: 12 }}>Camera Access Needed</p>
+                <p className="t-small">Allow camera access to continue</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <video ref={videoRef} autoPlay playsInline muted style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+
+              {/* Instruction pill */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5 }} className="safe-top">
+                <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                  <div className="instruction-pill">{instruction}</div>
+                </div>
+              </div>
+
+              {/* Viewfinder with gold corner brackets */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+                <div className="viewfinder-frame" style={{ width: '100%', maxWidth: 280, aspectRatio: '3/4' }}>
+                  <div className="viewfinder-corner vc-tl" />
+                  <div className="viewfinder-corner vc-tr" />
+                  <div className="viewfinder-corner vc-bl" />
+                  <div className="viewfinder-corner vc-br" />
+                  <div className="viewfinder-guide" />
+                </div>
+              </div>
+
+              {/* Bottom controls */}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5 }} className="safe-bottom">
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '0 24px 16px' }}>
+                  <ShutterButton onClick={handleShutter} disabled={!ready} />
+                  {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={onCancel}>Cancel</button>}
+                </div>
+              </div>
+            </>
+          )}
+        </motion.div>
+      );
+    }
+
+    function SearchingScreen({ onCancel, pintThumbnail }) {
+      return (
+        <motion.div
+          key="searching"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div className="layout" style={{ textAlign: 'center' }}>
+            {pintThumbnail && (
+              <div style={{ marginBottom: 32 }}>
+                <img src={pintThumbnail} alt="Your pint" style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'cover', border: '1px solid rgba(212,168,67,0.3)', boxShadow: '0 0 8px rgba(212,168,67,0.15)' }} />
+              </div>
+            )}
+            <div style={{ marginBottom: 24 }}>
+              <SearchRing />
+            </div>
+            <p style={{ fontSize: 20, fontWeight: 600, color: 'var(--gold)', marginBottom: 8 }}>Looking for an opponent</p>
+            <p className="t-small" style={{ marginBottom: 32 }}>This won't take long</p>
+            <button className="btn-text" onClick={onCancel}>Cancel</button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function MatchedScreen({ localStream, remoteStream, onReady }) {
+      const [toastVisible, setToastVisible] = useState(true);
+      useEffect(() => {
+        const t = setTimeout(() => setToastVisible(false), 3000);
+        return () => clearTimeout(t);
+      }, []);
+
+      return (
+        <motion.div
+          key="matched"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
+          className="safe-top safe-bottom"
+        >
+          <Toast message="Matched! Connecting video..." visible={toastVisible} />
+          <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gap: 8, padding: '8px 8px 0' }}>
+            <div className="video-container">
+              {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200 }}>
+                  <PulsingDots light />
+                </div>
+              )}
+            </div>
+            <div className="video-container">
+              {localStream ? <VideoFeed stream={localStream} muted mirrored /> : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', minHeight: 200 }}>
+                  <PulsingDots light />
+                </div>
+              )}
+            </div>
+          </div>
+          <div style={{ padding: '16px 24px' }}>
+            <button className="btn-primary-light" onClick={onReady}>Continue</button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function ReadyScreen({ localStream, remoteStream, myReady, opponentReady, onReady }) {
+      return (
+        <motion.div
+          key="ready"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
+          className="safe-top safe-bottom"
+        >
+          <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gap: 8, padding: '8px 8px 0' }}>
+            <div className="video-container" style={{ position: 'relative' }}>
+              {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+                  <PulsingDots light />
+                </div>
+              )}
+              <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                <div className={`ready-badge ${opponentReady ? 'ready-badge-on' : 'ready-badge-off'}`}>
+                  {opponentReady ? 'READY' : '...'}
+                </div>
+              </div>
+            </div>
+            <div className="video-container" style={{ position: 'relative' }}>
+              {localStream ? <VideoFeed stream={localStream} muted mirrored /> : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+                  <PulsingDots light />
+                </div>
+              )}
+              <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                <div className={`ready-badge ${myReady ? 'ready-badge-on' : 'ready-badge-off'}`}>
+                  {myReady ? 'READY' : '...'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: '16px 24px' }}>
+            {!myReady ? (
+              <button className="btn-success" onClick={() => { haptic(30); onReady(); }}>Ready Up</button>
+            ) : (
+              <button className="btn-primary-light" disabled>Waiting for opponent...</button>
+            )}
+          </div>
+        </motion.div>
+      );
+    }
+
+    function CountdownScreen({ gameStartTime, remoteStream, onDone }) {
+      const [phase, setPhase] = useState('pre'); // 'pre' | 'timer'
+      const [preNum, setPreNum] = useState(3);
+      const [timer, setTimer] = useState(30);
+      const [showGo, setShowGo] = useState(false);
+      const [flash, setFlash] = useState(false);
+      const timerRef = useRef(null);
+
+      const goPhrase = useMemo(() => ['Slainte!', 'GO!', 'Slainte!', 'GO!'][Math.floor(Math.random() * 4)], []);
+
+      // Haptic + sound on countdown number change
+      useEffect(() => {
+        if (phase === 'pre' && !showGo) {
+          sfx.tick();
+          haptic(30);
+        }
+      }, [preNum]);
+
+      useEffect(() => {
+        // Pre-countdown: 3, 2, 1, GO!
+        const delay = gameStartTime ? Math.max(0, gameStartTime - Date.now()) : 0;
+        const startMs = Date.now() + delay;
+
+        // 3
+        const t3 = setTimeout(() => setPreNum(3), 0);
+        const t2 = setTimeout(() => setPreNum(2), delay > 2000 ? delay / 3 : 1000);
+        const t1 = setTimeout(() => setPreNum(1), delay > 2000 ? (delay / 3) * 2 : 2000);
+        const tGo = setTimeout(() => {
+          setShowGo(true);
+          setFlash(true);
+          sfx.go();
+          haptic([50, 30, 100]);
+          setTimeout(() => setFlash(false), 200);
+        }, delay > 2000 ? delay - 200 : 2800);
+
+        const tStart = setTimeout(() => {
+          setPhase('timer');
+          setTimer(30);
+          timerRef.current = setInterval(() => {
+            setTimer(t => {
+              const next = Math.max(0, +(t - 0.01).toFixed(2));
+              if (next <= 0) { clearInterval(timerRef.current); return 0; }
+              return next;
+            });
+          }, 10);
+        }, Math.max(delay, 3000));
+
+        return () => {
+          clearTimeout(t3); clearTimeout(t2); clearTimeout(t1); clearTimeout(tGo); clearTimeout(tStart);
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, [gameStartTime]);
+
+      // Auto-transition when timer hits 0
+      useEffect(() => {
+        if (timer === 0 && phase === 'timer') onDone();
+      }, [timer, phase, onDone]);
+
+      if (phase === 'pre') {
+        return (
+          <motion.div key="countdown-pre"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={springConfig}
+            style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            {flash && <div style={{ position: 'absolute', inset: 0, background: 'rgba(52,211,153,0.25)', zIndex: 20 }} />}
+            <AnimatePresence mode="wait">
+              {!showGo ? (
+                <motion.div key={preNum}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 2, opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  style={{ fontSize: 120, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: 'var(--cream)' }}>
+                  {preNum}
+                </motion.div>
+              ) : (
+                <motion.div key="go"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 2, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ fontSize: 100, fontWeight: 900, color: 'var(--emerald)' }}>
+                  {goPhrase}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      }
+
+      const isLow = timer <= 10;
+      const isCritical = timer <= 5;
+
+      return (
+        <motion.div key="countdown-timer"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', position: 'relative' }}
+          className="safe-top safe-bottom">
+
+          {/* PIP opponent */}
+          <div className="pip-video">
+            {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PulsingDots light />
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <p className="t-label" style={{ marginBottom: 16 }}>TIME REMAINING</p>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TimerArc progress={timer / 30} />
+              <div className={`t-hero ${isLow ? 'timer-pulse' : ''}`} style={{ color: isCritical ? 'var(--accent-red)' : 'var(--cream)', position: 'relative' }}>
+                {timer.toFixed(1)}
+              </div>
+            </div>
+            <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--text-secondary)', marginTop: 12 }}>
+              Stop exactly at the G
+            </p>
+          </div>
+
+          <div className="layout" style={{ paddingBottom: 16 }}>
+            <button className="btn-success" onClick={() => {
+              if (timerRef.current) clearInterval(timerRef.current);
+              haptic(50);
+              onDone();
+            }}>I'm Done</button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function WaitingScreen({ accuracy, resultImage, remoteStream, opponentSubmitted }) {
+      return (
+        <motion.div key="waiting"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+          className="safe-top safe-bottom">
+
+          <div className="pip-video">
+            {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : null}
+          </div>
+
+          <div className="layout" style={{ textAlign: 'center' }}>
+            <p className="t-label" style={{ marginBottom: 12 }}>YOUR ACCURACY</p>
+            <div style={{ fontSize: 64, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: accuracy !== null ? getAccuracyColor(accuracy) : 'var(--cream)', fontVariantNumeric: 'tabular-nums', marginBottom: 16 }}>
+              {accuracy !== null ? <><RollingNumber value={accuracy} />%</> : '--'}
+            </div>
+
+            {resultImage && (
+              <div style={{ marginBottom: 24 }}>
+                <img src={resultImage} alt="Your result"
+                  style={{ width: 120, height: 120, borderRadius: 16, objectFit: 'cover', border: '1px solid rgba(212,168,67,0.3)', boxShadow: '0 0 8px rgba(212,168,67,0.15)', margin: '0 auto', display: 'block' }} />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 8 }}>
+              <PulsingDots light />
+            </div>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
+              {opponentSubmitted ? 'Opponent submitted! Preparing results...' : 'Waiting for opponent...'}
+            </p>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function RevealScreen({ revealData, playerId, onRematch, onNewOpponent, rematchRequested, rematchPending, onAcceptRematch, onDeclineRematch }) {
+      const [phase, setPhase] = useState(0);
+      const [showConfetti, setShowConfetti] = useState(false);
+
+      const { results, winnerId, player1Id, player2Id } = revealData;
+      const isWinner = winnerId === playerId;
+      const isTie = winnerId === null;
+      const opId = playerId === player1Id ? player2Id : player1Id;
+      const myResult = results[playerId];
+      const opResult = results[opId];
+
+      useEffect(() => {
+        const timings = [0, 1000, 2500, 4000, 5500, 7000];
+        const timers = timings.map((delay, i) => setTimeout(() => setPhase(i), delay));
+        const confettiTimer = setTimeout(() => {
+          if (winnerId === playerId) {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 2500);
+          }
+        }, 7500);
+        return () => { timers.forEach(clearTimeout); clearTimeout(confettiTimer); };
+      }, [winnerId, playerId]);
+
+      // Sound + haptic on winner reveal
+      useEffect(() => {
+        if (phase === 5) {
+          haptic([100, 50, 100]);
+          if (isWinner) sfx.win();
+          else if (!isTie) sfx.lose();
+        }
+      }, [phase]);
+
+      const handleShare = useCallback(async () => {
+        const text = isWinner
+          ? `I won Split the G with ${myResult.accuracy}% accuracy!`
+          : `I scored ${myResult.accuracy}% on Split the G!`;
+        try { await navigator.share({ title: 'Split the G', text }); } catch (e) {}
+      }, [isWinner, myResult]);
+
+      return (
+        <motion.div key="reveal"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={springConfig}
+          style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', position: 'relative' }}
+          className="safe-top safe-bottom">
+
+          {showConfetti && <ConfettiBurst />}
+
+          {/* Emerald pulse glow on winner announce */}
+          {phase >= 5 && isWinner && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.8, 0, 0.5, 0] }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+              style={{
+                position: 'fixed', inset: 0,
+                background: 'radial-gradient(circle at center, rgba(52,211,153,0.12) 0%, transparent 70%)',
+                pointerEvents: 'none', zIndex: 0
+              }}
+            />
+          )}
+
+          <div className="layout" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16, position: 'relative', zIndex: 1 }}>
+
+            {/* Phase 0: Title */}
+            {phase >= 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: phase === 0 ? 1 : 0.4, y: 0 }}
+                transition={springConfig}
+                style={{ textAlign: 'center', marginBottom: 8 }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>The Results Are In</p>
+              </motion.div>
+            )}
+
+            {/* Phase 1-2: Opponent card */}
+            {phase >= 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springConfig}
+                className={phase >= 5 && !isTie && !isWinner ? 'animated-gold-border' : 'card-dark'}>
+                <p className="t-label" style={{ marginBottom: 8 }}>OPPONENT</p>
+                {opResult.image && (
+                  <div style={{ marginBottom: 12 }}>
+                    <img src={opResult.image} alt="Opponent"
+                      style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 12 }} />
+                  </div>
+                )}
+                <div style={{ textAlign: 'center' }}>
+                  {phase >= 2 ? (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      transition={springConfig}
+                      style={{ fontSize: 36, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: getAccuracyColor(opResult.accuracy) }}>
+                      <RollingNumber value={opResult.accuracy} />%
+                    </motion.div>
+                  ) : (
+                    <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: 'var(--text-secondary)' }}>---</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Phase 3-4: My card */}
+            {phase >= 3 && (
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springConfig}
+                className={phase >= 5 && !isTie && isWinner ? 'animated-gold-border' : 'card-dark'}>
+                <p className="t-label" style={{ marginBottom: 8 }}>YOU</p>
+                {myResult.image && (
+                  <div style={{ marginBottom: 12 }}>
+                    <img src={myResult.image} alt="You"
+                      style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 12 }} />
+                  </div>
+                )}
+                <div style={{ textAlign: 'center' }}>
+                  {phase >= 4 ? (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      transition={springConfig}
+                      style={{ fontSize: 36, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: getAccuracyColor(myResult.accuracy) }}>
+                      <RollingNumber value={myResult.accuracy} />%
+                    </motion.div>
+                  ) : (
+                    <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: 'var(--text-secondary)' }}>---</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Phase 5: Winner announcement */}
+            {phase >= 5 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.1, 1] }}
+                transition={{ duration: 0.5 }}
+                style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{
+                  fontSize: 28, fontWeight: 900,
+                  color: isTie ? 'var(--text-secondary)' : isWinner ? 'var(--emerald)' : 'var(--accent-red)',
+                  marginBottom: 4
+                }}>
+                  {isTie ? "It's a Tie" : isWinner ? 'You Win' : 'You Lose'}
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-secondary)' }}>
+                  {isTie ? 'Perfectly matched!' : isWinner ? 'Superior split!' : 'Better luck next time'}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Post-game actions */}
+            {phase >= 5 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={springConfig}
+                style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+
+                {rematchPending ? (
+                  <div className="card-dark" style={{ textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 12 }}>Opponent wants a rematch!</p>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button className="btn-success" style={{ flex: 1 }} onClick={onAcceptRematch}>Accept</button>
+                      <button className="btn-primary-light" style={{ flex: 1 }} onClick={onDeclineRematch}>Decline</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button className="btn-primary-light" onClick={onRematch} disabled={rematchRequested}>
+                      {rematchRequested ? 'Waiting for opponent...' : 'Rematch'}
+                    </button>
+                    <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={onNewOpponent}>
+                      New Opponent
+                    </button>
+                    {typeof navigator.share === 'function' && (
+                      <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={handleShare}>
+                        Share Result
+                      </button>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      );
+    }
+
+    // ============ MAIN APP ============
+
+    function App() {
+      const { socket, connected } = useSocket();
+      const [screen, setScreen] = useState('landing');
+      const { streak, recordWin, resetStreak } = useStreak();
+
+      // Room/match state
+      const [roomId, setRoomId] = useState(null);
+      const [playerId, setPlayerId] = useState(null);
+      const [opponentId, setOpponentId] = useState(null);
+      const [isInitiator, setIsInitiator] = useState(false);
+
+      // Ready
+      const [myReady, setMyReady] = useState(false);
+      const [opponentReady, setOpponentReady] = useState(false);
+
+      // Game
+      const [gameStartTime, setGameStartTime] = useState(null);
+
+      // Pint capture
+      const [pintImage, setPintImage] = useState(null);
+
+      // Result
+      const [myResult, setMyResult] = useState(null);
+      const [opponentSubmitted, setOpponentSubmitted] = useState(false);
+      const [revealData, setRevealData] = useState(null);
+
+      // Capture-result
+      const [capturedResultImage, setCapturedResultImage] = useState(null);
+      const [isScanning, setIsScanning] = useState(false);
+
+      // Rematch
+      const [rematchRequested, setRematchRequested] = useState(false);
+      const [rematchPending, setRematchPending] = useState(false);
+
+      // Toast
+      const [toastMsg, setToastMsg] = useState(null);
+      const [toastType, setToastType] = useState('info');
+      const [toastVisible, setToastVisible] = useState(false);
+
+      const canvasRef = useRef(null);
+      const { analyze } = usePintAnalysis();
+
+      // WebRTC
+      const webrtc = useWebRTC(socket, opponentId, isInitiator);
+
+      const showToast = useCallback((msg, type = 'info') => {
+        setToastMsg(msg);
+        setToastType(type);
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 3000);
+      }, []);
+
+      // Track streak on reveal
+      useEffect(() => {
+        if (revealData && playerId) {
+          if (revealData.winnerId === playerId) recordWin();
+          else if (revealData.winnerId !== null) resetStreak();
+        }
+      }, [revealData, playerId, recordWin, resetStreak]);
+
+      // ---- Socket events ----
+      useEffect(() => {
+        if (!socket) return;
+
+        const onMatched = (data) => {
+          setRoomId(data.roomId);
+          setPlayerId(data.playerId);
+          setOpponentId(data.opponentId);
+          setIsInitiator(data.isInitiator);
+          setScreen('matched');
+        };
+
+        const onReadyUpdate = (data) => {
+          const myId = socket.id;
+          setMyReady(data.readyState[myId]);
+          const oppId = Object.keys(data.readyState).find(id => id !== myId);
+          if (oppId) setOpponentReady(data.readyState[oppId]);
+        };
+
+        const onGameStart = (data) => {
+          setGameStartTime(data.countdownStart);
+          setScreen('countdown');
+        };
+
+        const onOpponentSubmitted = () => setOpponentSubmitted(true);
+
+        const onRevealStart = (data) => {
+          setRevealData(data);
+          setScreen('reveal');
+        };
+
+        const onRematchRequested = () => setRematchPending(true);
+
+        const onRematchAccepted = () => {
+          setMyReady(false);
+          setOpponentReady(false);
+          setMyResult(null);
+          setOpponentSubmitted(false);
+          setRevealData(null);
+          setRematchRequested(false);
+          setRematchPending(false);
+          setCapturedResultImage(null);
+          setIsScanning(false);
+          setPintImage(null);
+          setScreen('capture-pint');
+        };
+
+        const onRematchDeclined = () => {
+          setRematchRequested(false);
+          showToast('Opponent declined rematch', 'error');
+        };
+
+        const onOpponentDisconnected = () => {
+          showToast('Opponent disconnected', 'error');
+          handleLeaveRoom();
+        };
+
+        const onOpponentLeft = () => {
+          showToast('Opponent left the game', 'error');
+          handleLeaveRoom();
+        };
+
+        socket.on('matched', onMatched);
+        socket.on('ready-update', onReadyUpdate);
+        socket.on('game-start', onGameStart);
+        socket.on('opponent-submitted', onOpponentSubmitted);
+        socket.on('reveal-start', onRevealStart);
+        socket.on('rematch-requested', onRematchRequested);
+        socket.on('rematch-accepted', onRematchAccepted);
+        socket.on('rematch-declined', onRematchDeclined);
+        socket.on('opponent-disconnected', onOpponentDisconnected);
+        socket.on('opponent-left', onOpponentLeft);
+
+        return () => {
+          socket.off('matched', onMatched);
+          socket.off('ready-update', onReadyUpdate);
+          socket.off('game-start', onGameStart);
+          socket.off('opponent-submitted', onOpponentSubmitted);
+          socket.off('reveal-start', onRevealStart);
+          socket.off('rematch-requested', onRematchRequested);
+          socket.off('rematch-accepted', onRematchAccepted);
+          socket.off('rematch-declined', onRematchDeclined);
+          socket.off('opponent-disconnected', onOpponentDisconnected);
+          socket.off('opponent-left', onOpponentLeft);
+        };
+      }, [socket, showToast]);
+
+      // Start WebRTC when matched
+      useEffect(() => {
+        if (screen === 'matched' && socket && opponentId) {
+          webrtc.start();
+        }
+      }, [screen, socket, opponentId]);
+
+      // Auto-advance from matched to ready when remote stream arrives
+      useEffect(() => {
+        if (screen === 'matched' && webrtc.remoteStream) {
+          // Don't auto-advance — let user tap Continue
+        }
+      }, [screen, webrtc.remoteStream]);
+
+      // ---- Handlers ----
+      const handleLeaveRoom = useCallback(() => {
+        webrtc.cleanup();
+        if (socket) socket.emit('leave-room');
+        setRoomId(null);
+        setPlayerId(null);
+        setOpponentId(null);
+        setMyReady(false);
+        setOpponentReady(false);
+        setMyResult(null);
+        setOpponentSubmitted(false);
+        setRevealData(null);
+        setRematchRequested(false);
+        setRematchPending(false);
+        setCapturedResultImage(null);
+        setIsScanning(false);
+        setPintImage(null);
+        setScreen('landing');
+      }, [socket, webrtc]);
+
+      const handleGetStarted = () => setScreen('capture-pint');
+
+      const handlePintCaptured = (img) => {
+        setPintImage(img);
+        setScreen('searching');
+        if (socket) {
+          socket.emit('join-queue');
+          socket.emit('submit-pint-image', { image: img });
+        }
+      };
+
+      const handleCancelSearch = () => {
+        if (socket) socket.emit('leave-queue');
+        setPintImage(null);
+        setScreen('landing');
+      };
+
+      const handleMatchedContinue = () => setScreen('ready');
+
+      const handleReady = () => {
+        if (socket) socket.emit('player-ready');
+        setMyReady(true);
+      };
+
+      const handleDrinkingDone = useCallback(() => setScreen('capture-result'), []);
+
+      const handleResultCaptured = async (img) => {
+        setCapturedResultImage(img);
+        setIsScanning(true);
+
+        // Wait for scan animation, then analyze
+        setTimeout(async () => {
+          const canvas = canvasRef.current;
+          const analysis = await analyze(img, canvas);
+          setIsScanning(false);
+          setMyResult({ ...analysis, image: img });
+          if (socket) socket.emit('submit-result', { image: img, accuracy: analysis.accuracy });
+          setScreen('waiting');
+        }, 1800);
+      };
+
+      const handleRematch = () => {
+        setRematchRequested(true);
+        if (socket) socket.emit('request-rematch');
+      };
+
+      const handleAcceptRematch = () => {
+        if (socket) socket.emit('accept-rematch');
+      };
+
+      const handleDeclineRematch = () => {
+        if (socket) socket.emit('decline-rematch');
+        setRematchPending(false);
+      };
+
+      const handleNewOpponent = () => {
+        handleLeaveRoom();
+        setTimeout(() => {
+          setScreen('capture-pint');
+        }, 100);
+      };
+
+      return (
+        <div style={{ minHeight: '100vh' }}>
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+          <Toast message={toastMsg} type={toastType} visible={toastVisible} />
+
+          <AnimatePresence mode="wait">
+            {screen === 'landing' && (
+              <LandingScreen key="landing" onStart={handleGetStarted} streak={streak} />
+            )}
+
+            {screen === 'capture-pint' && (
+              <CaptureScreen key="capture-pint" mode="full-pint" onCapture={handlePintCaptured} onCancel={() => setScreen('landing')} />
+            )}
+
+            {screen === 'searching' && (
+              <SearchingScreen key="searching" onCancel={handleCancelSearch} pintThumbnail={pintImage} />
+            )}
+
+            {screen === 'matched' && (
+              <MatchedScreen key="matched"
+                localStream={webrtc.localStream}
+                remoteStream={webrtc.remoteStream}
+                onReady={handleMatchedContinue} />
+            )}
+
+            {screen === 'ready' && (
+              <ReadyScreen key="ready"
+                localStream={webrtc.localStream}
+                remoteStream={webrtc.remoteStream}
+                myReady={myReady}
+                opponentReady={opponentReady}
+                onReady={handleReady} />
+            )}
+
+            {screen === 'countdown' && (
+              <CountdownScreen key="countdown"
+                gameStartTime={gameStartTime}
+                remoteStream={webrtc.remoteStream}
+                onDone={handleDrinkingDone} />
+            )}
+
+            {screen === 'capture-result' && (
+              <CaptureScreen key="capture-result" mode="result"
+                onCapture={handleResultCaptured}
+                capturedImage={capturedResultImage}
+                isScanning={isScanning} />
+            )}
+
+            {screen === 'waiting' && (
+              <WaitingScreen key="waiting"
+                accuracy={myResult?.accuracy ?? null}
+                resultImage={myResult?.image}
+                remoteStream={webrtc.remoteStream}
+                opponentSubmitted={opponentSubmitted} />
+            )}
+
+            {screen === 'reveal' && revealData && (
+              <RevealScreen key="reveal"
+                revealData={revealData}
+                playerId={playerId}
+                onRematch={handleRematch}
+                onNewOpponent={handleNewOpponent}
+                rematchRequested={rematchRequested}
+                rematchPending={rematchPending}
+                onAcceptRematch={handleAcceptRematch}
+                onDeclineRematch={handleDeclineRematch} />
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

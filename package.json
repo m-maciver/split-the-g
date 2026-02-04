@@ -1,0 +1,17 @@
+{
+  "name": "split-the-g",
+  "version": "2.0.0",
+  "description": "Multiplayer Split the G - 1v1 competitive Guinness challenge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
