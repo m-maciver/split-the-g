@@ -1,86 +1,98 @@
 # SPLIT IT - Next Session Todo List
 
-## Done (from previous sessions)
-- [x] Irish Pub + Silicon Valley retheme (dark pub colors, gold/emerald/cream)
-- [x] Space Mono for numeric data, DM Sans for labels/body
-- [x] Animated gradient borders, noise texture, glassmorphism cards
-- [x] SearchRing SVG spinner, TimerArc countdown ring
-- [x] Gold corner-bracket viewfinder with emerald guide line
-- [x] 3-2-1 animated countdown with random "Slainte!" / "GO!"
-- [x] Sound effects (countdown tick, shutter, go, win, lose via Web Audio API)
-- [x] Haptic feedback (shutter, countdown, ready up, reveal)
-- [x] Camera flash overlay on capture
-- [x] Accuracy color gradient (emerald > gold > orange > red)
-- [x] Ambient gold particles on landing
-- [x] Win streak counter (localStorage)
-- [x] Web Share API on reveal screen
-- [x] PWA manifest updated
+## Recently Completed
+- [x] Robust pint analysis for dark pub environments (histogram equalization, adaptive thresholding)
+- [x] Sound toggle with iOS audio unlock workaround
+- [x] Visual overlay showing detected liquid level vs target G line
+- [x] Personal best celebrations (sound + animation)
+- [x] Close match reveal with extended dramatic timing
+- [x] Accessibility improvements (focus styles, ARIA labels, skip links)
+- [x] PWA service worker for offline support
+- [x] 30-second communication window before match starts
+- [x] Auto-start countdown on ready screen
+- [x] Ready-up button for both players to start early
 
 ---
 
-## Priority 1: Test & Validate Everything
-- [ ] Full two-device game flow test (match > ready > drink > submit > reveal > rematch)
-- [ ] Test on iOS Safari (camera permissions, safe areas, haptics)
-- [ ] Test on Android Chrome (camera, vibration API, Web Share)
-- [ ] Verify countdown timer sync between players
-- [ ] Confirm WebRTC video displays correctly on both sides
-- [ ] Test win streak persists across sessions
-- [ ] Test all sound effects fire at correct moments
+## Priority 1: Deploy to Production
+Get the app live so friends can actually play!
 
-## Priority 2: Robustness & Error Handling
-- [x] WebRTC connection failure — show retry/reconnect button instead of dead screen
-- [x] Socket disconnect mid-game — reconnection logic to resume game state
-- [x] Opponent closes app during drinking phase — graceful handling with message
-- [x] Opponent timeout on submit — auto-win after 90s should show clear UI feedback
-- [ ] Replace any remaining browser `alert()` calls with in-app toast messages
-- [x] Add "Connecting..." loading state while WebRTC peer connection establishes
-- [x] Handle camera permission denied gracefully (explain why it's needed)
+- [ ] Deploy to Vercel or Railway (needs WebSocket support)
+- [ ] Set up custom domain (splitit.app / splittheg.com)
+- [ ] Configure production TURN server (Twilio/Metered) for reliable WebRTC
+- [ ] Set environment variables in production
+- [ ] Test full game flow on production URL with real users
+- [ ] Set up basic analytics (Plausible/Umami)
 
-## Priority 3: Gameplay Features
-- [x] Player nicknames — let users pick a name before queuing (stored in localStorage)
-- [x] Best-of-3 mode — option to play a series instead of single round
-- [x] Rematch improvements — show "rematch requested" state more clearly
-- [x] Show opponent's live video feed during the drinking/submit phase
-- [x] Post-game stats — show both pint images side by side on reveal
-- [x] Leaderboard — simple localStorage leaderboard of best accuracy scores
+## Priority 2: Private Room Codes
+Let friends play together without random matchmaking.
 
-## Priority 4: Mobile & Network
-- [ ] Test rear camera for pint capture, front camera for face (if applicable)
-- [x] Optimize video resolution/bitrate for mobile networks
-- [x] Add TURN server support for networks that block P2P (Twilio/Metered TURN)
-- [ ] Fix any iOS-specific quirks (camera orientation, audio autoplay policy)
-- [x] Lock to portrait orientation (or handle landscape gracefully)
+- [ ] Add "Create Private Room" button on home screen
+- [ ] Generate 4-6 character room codes (e.g., "PINT42")
+- [ ] Add "Join Room" input field for entering codes
+- [ ] Server: handle private room creation and joining
+- [ ] Share room code via Web Share API or copy button
+- [ ] Room expires after 5 minutes if not joined
 
-## Priority 5: Production Readiness
-- [x] Server-side accuracy validation (prevent score spoofing)
-- [x] Rate limiting on socket events (prevent queue spam)
-- [x] CORS lockdown — restrict to actual domain instead of `origin: '*'`
-- [x] Environment variables for port, host, TURN credentials
-- [x] Structured logging (replace console.log with proper logger)
-- [x] Clean up unused code and console.log statements
-- [x] Room cleanup — auto-destroy stale rooms after timeout
+## Priority 3: Shareable Result Cards
+Auto-generate images for social sharing.
 
-## Priority 6: Code Quality (If Time)
-- [x] Extract WebRTC logic into a dedicated custom hook
-- [ ] Extract game state machine into its own module
-- [ ] Split index.html into separate component files with a bundler
-- [x] Add JSDoc comments to server socket handlers
-- [x] Memory leak audit — ensure camera streams are always released
+- [ ] Canvas-based result card generation (score, pint photo, rank)
+- [ ] Include "SPLIT IT" branding on the card
+- [ ] "Share Result" button that shares image directly
+- [ ] Add "Beat my score" challenge link in share text
+- [ ] Open Graph meta tags for link previews
+
+## Priority 4: Testing & Polish
+- [ ] Full two-device test on production URL
+- [ ] Test on iOS Safari (camera, audio, haptics, safe areas)
+- [ ] Test on Android Chrome (camera, vibration, Web Share)
+- [ ] Test on pub Wi-Fi (verify TURN server works)
+- [ ] Fix any remaining iOS audio autoplay quirks
+- [ ] Replace any leftover `alert()` calls with toast messages
+
+## Priority 5: Marketing Assets
+- [ ] Record 15-30s demo video of a full game
+- [ ] Create GIF of the reveal animation
+- [ ] Design QR code poster template for pubs
+- [ ] Create Open Graph image (1200x630) for link previews
+- [ ] Set up @SplitTheG social accounts
+
+## Priority 6: Future Features (Backlog)
+- [ ] Global leaderboard (requires backend/database)
+- [ ] Achievement badges (First Win, 5 Streak, 90%+ Accuracy)
+- [ ] Push notifications ("Your rival just beat your high score")
+- [ ] "Pub of the Week" location-tagged leaderboard
+- [ ] Tournament mode with brackets
+- [ ] Spectator mode for watching live games
 
 ---
 
-## Quick Start
+## Quick Start (Local Dev)
 ```bash
-cd /Users/maciver/split-the-g
+cd C:/Users/Admin/split-the-g
 npm start
 ```
-Then open https://192.168.0.19:8443 on two devices to test.
+Opens https://192.168.0.19:8443 — scan QR code in terminal for mobile.
 
-## Notes
-- Server runs on port 8443 (HTTPS) with self-signed cert
-- Need to accept security warning on each device
-- QR code displays in terminal for easy mobile access
-- Player stats stored in localStorage key `stg-stats` (JSON)
-- Nicknames stored in localStorage key `stg-nickname`
-- Leaderboard stored in localStorage key `stg-leaderboard`
-- Environment variables: PORT, HTTP_PORT, CORS_ORIGIN, TURN_URL, TURN_USERNAME, TURN_CREDENTIAL, LOG_LEVEL
+## Environment Variables
+```
+PORT=8443
+HTTP_PORT=8080
+CORS_ORIGIN=https://yourdomain.com
+TURN_URL=turn:your-turn-server.com:3478
+TURN_USERNAME=username
+TURN_CREDENTIAL=password
+LOG_LEVEL=info
+```
+
+## Key localStorage Keys
+- `stg-stats` — Player statistics (games, wins, streaks, best accuracy)
+- `stg-nickname` — Player display name
+- `stg-leaderboard` — Local high scores
+
+---
+
+## Session Notes
+_Use this space to jot down ideas, bugs, or observations during dev sessions._
+
