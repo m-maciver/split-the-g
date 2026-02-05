@@ -28,44 +28,44 @@
 - [ ] Test all sound effects fire at correct moments
 
 ## Priority 2: Robustness & Error Handling
-- [ ] WebRTC connection failure — show retry/reconnect button instead of dead screen
-- [ ] Socket disconnect mid-game — reconnection logic to resume game state
-- [ ] Opponent closes app during drinking phase — graceful handling with message
-- [ ] Opponent timeout on submit — auto-win after 90s should show clear UI feedback
+- [x] WebRTC connection failure — show retry/reconnect button instead of dead screen
+- [x] Socket disconnect mid-game — reconnection logic to resume game state
+- [x] Opponent closes app during drinking phase — graceful handling with message
+- [x] Opponent timeout on submit — auto-win after 90s should show clear UI feedback
 - [ ] Replace any remaining browser `alert()` calls with in-app toast messages
-- [ ] Add "Connecting..." loading state while WebRTC peer connection establishes
-- [ ] Handle camera permission denied gracefully (explain why it's needed)
+- [x] Add "Connecting..." loading state while WebRTC peer connection establishes
+- [x] Handle camera permission denied gracefully (explain why it's needed)
 
 ## Priority 3: Gameplay Features
-- [ ] Player nicknames — let users pick a name before queuing (stored in localStorage)
-- [ ] Best-of-3 mode — option to play a series instead of single round
-- [ ] Rematch improvements — show "rematch requested" state more clearly
-- [ ] Show opponent's live video feed during the drinking/submit phase
-- [ ] Post-game stats — show both pint images side by side on reveal
-- [ ] Leaderboard — simple localStorage leaderboard of best accuracy scores
+- [x] Player nicknames — let users pick a name before queuing (stored in localStorage)
+- [x] Best-of-3 mode — option to play a series instead of single round
+- [x] Rematch improvements — show "rematch requested" state more clearly
+- [x] Show opponent's live video feed during the drinking/submit phase
+- [x] Post-game stats — show both pint images side by side on reveal
+- [x] Leaderboard — simple localStorage leaderboard of best accuracy scores
 
 ## Priority 4: Mobile & Network
 - [ ] Test rear camera for pint capture, front camera for face (if applicable)
-- [ ] Optimize video resolution/bitrate for mobile networks
-- [ ] Add TURN server support for networks that block P2P (Twilio/Metered TURN)
+- [x] Optimize video resolution/bitrate for mobile networks
+- [x] Add TURN server support for networks that block P2P (Twilio/Metered TURN)
 - [ ] Fix any iOS-specific quirks (camera orientation, audio autoplay policy)
-- [ ] Lock to portrait orientation (or handle landscape gracefully)
+- [x] Lock to portrait orientation (or handle landscape gracefully)
 
 ## Priority 5: Production Readiness
-- [ ] Server-side accuracy validation (prevent score spoofing)
-- [ ] Rate limiting on socket events (prevent queue spam)
-- [ ] CORS lockdown — restrict to actual domain instead of `origin: '*'`
-- [ ] Environment variables for port, host, TURN credentials
-- [ ] Structured logging (replace console.log with proper logger)
-- [ ] Clean up unused code and console.log statements
-- [ ] Room cleanup — auto-destroy stale rooms after timeout
+- [x] Server-side accuracy validation (prevent score spoofing)
+- [x] Rate limiting on socket events (prevent queue spam)
+- [x] CORS lockdown — restrict to actual domain instead of `origin: '*'`
+- [x] Environment variables for port, host, TURN credentials
+- [x] Structured logging (replace console.log with proper logger)
+- [x] Clean up unused code and console.log statements
+- [x] Room cleanup — auto-destroy stale rooms after timeout
 
 ## Priority 6: Code Quality (If Time)
-- [ ] Extract WebRTC logic into a dedicated custom hook
+- [x] Extract WebRTC logic into a dedicated custom hook
 - [ ] Extract game state machine into its own module
 - [ ] Split index.html into separate component files with a bundler
-- [ ] Add JSDoc comments to server socket handlers
-- [ ] Memory leak audit — ensure camera streams are always released
+- [x] Add JSDoc comments to server socket handlers
+- [x] Memory leak audit — ensure camera streams are always released
 
 ---
 
@@ -81,3 +81,6 @@ Then open https://192.168.0.19:8443 on two devices to test.
 - Need to accept security warning on each device
 - QR code displays in terminal for easy mobile access
 - Player stats stored in localStorage key `stg-stats` (JSON)
+- Nicknames stored in localStorage key `stg-nickname`
+- Leaderboard stored in localStorage key `stg-leaderboard`
+- Environment variables: PORT, HTTP_PORT, CORS_ORIGIN, TURN_URL, TURN_USERNAME, TURN_CREDENTIAL, LOG_LEVEL
