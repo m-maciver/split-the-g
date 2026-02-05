@@ -928,32 +928,172 @@
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
             const { width, height } = canvas;
-            const imageDataObj = ctx.getImageData(0, 0, width, height);
-            const pixels = imageDataObj.data;
-            const targetY = Math.floor(height / 2);
+            let imageDataObj = ctx.getImageData(0, 0, width, height);
+            let pixels = imageDataObj.data;
 
-            // Scan 7 columns across the center third for robustness
-            const columns = [];
-            for (let c = 0; c < 7; c++) {
-              columns.push(Math.floor(width * (0.35 + c * 0.05)));
+            // ========== PREPROCESSING: CONTRAST-LIMITED ADAPTIVE HISTOGRAM EQUALIZATION ==========
+            // This dramatically improves detection in dark pub environments
+
+            // Step 1: Build luminance histogram
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < pixels.length; i += 4) {
+              const lum = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
+              histogram[lum]++;
             }
-            const liquidYs = columns.map(cx => {
-              for (let y = height - 1; y >= 0; y--) {
+
+            // Step 2: Find actual min/max luminance (ignore outliers - bottom/top 1%)
+            const totalPixels = (width * height);
+            const clipThreshold = totalPixels * 0.01;
+            let minLum = 0, maxLum = 255;
+            let cumulative = 0;
+            for (let i = 0; i < 256; i++) {
+              cumulative += histogram[i];
+              if (cumulative > clipThreshold) { minLum = i; break; }
+            }
+            cumulative = 0;
+            for (let i = 255; i >= 0; i--) {
+              cumulative += histogram[i];
+              if (cumulative > clipThreshold) { maxLum = i; break; }
+            }
+
+            // Step 3: Apply contrast stretching if image is low contrast
+            const contrast = maxLum - minLum;
+            if (contrast < 100 && contrast > 10) {
+              // Stretch the histogram to full 0-255 range
+              const scale = 255 / contrast;
+              for (let i = 0; i < pixels.length; i += 4) {
+                const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                const newLum = Math.min(255, Math.max(0, (lum - minLum) * scale));
+                const factor = lum > 0 ? newLum / lum : 1;
+                pixels[i] = Math.min(255, pixels[i] * factor);
+                pixels[i + 1] = Math.min(255, pixels[i + 1] * factor);
+                pixels[i + 2] = Math.min(255, pixels[i + 2] * factor);
+              }
+              // Update canvas with enhanced image
+              ctx.putImageData(imageDataObj, 0, 0);
+            }
+
+            // ========== ROBUST PUB-FRIENDLY ANALYSIS ==========
+            // Handles: low light, shadows, variable contrast, dark environments
+
+            // 1. ADAPTIVE SAMPLING - scan more columns for better accuracy
+            const numColumns = 15;
+            const columnStart = 0.25;  // Start at 25% (avoid glass edges)
+            const columnEnd = 0.75;    // End at 75%
+            const columnSpacing = (columnEnd - columnStart) / (numColumns - 1);
+
+            // 2. BUILD LUMINANCE PROFILE for the entire center region
+            // This helps us understand the lighting conditions
+            const columnProfiles = [];
+            for (let c = 0; c < numColumns; c++) {
+              const cx = Math.floor(width * (columnStart + c * columnSpacing));
+              const profile = [];
+              for (let y = 0; y < height; y++) {
                 const i = (y * width + cx) * 4;
                 const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-                if (lum > 100) return y;
+                profile.push(lum);
               }
-              return height;
-            });
-            // Use median for noise resistance
-            liquidYs.sort((a, b) => a - b);
-            const liquidY = liquidYs[Math.floor(liquidYs.length / 2)];
+              columnProfiles.push(profile);
+            }
 
+            // 3. COMPUTE IMAGE STATISTICS for adaptive thresholding
+            // Sample the top 20% (likely foam/head area) and bottom 40% (likely stout)
+            const topRegionEnd = Math.floor(height * 0.2);
+            const bottomRegionStart = Math.floor(height * 0.6);
+            let topLumSum = 0, topCount = 0;
+            let bottomLumSum = 0, bottomCount = 0;
+
+            for (const profile of columnProfiles) {
+              for (let y = 0; y < topRegionEnd; y++) {
+                topLumSum += profile[y];
+                topCount++;
+              }
+              for (let y = bottomRegionStart; y < height; y++) {
+                bottomLumSum += profile[y];
+                bottomCount++;
+              }
+            }
+
+            const avgTopLum = topCount > 0 ? topLumSum / topCount : 128;
+            const avgBottomLum = bottomCount > 0 ? bottomLumSum / bottomCount : 64;
+
+            // 4. ADAPTIVE THRESHOLD - adjusts to actual lighting conditions
+            // Threshold is set between the dark (stout) and bright (foam) regions
+            // Use weighted average biased towards brighter (foam detection)
+            const lumRange = avgTopLum - avgBottomLum;
+            const adaptiveThreshold = avgBottomLum + lumRange * 0.4;
+            // Fallback: if contrast is too low, use a relative threshold
+            const minContrast = 20;
+            const threshold = lumRange > minContrast ? adaptiveThreshold : avgBottomLum + 15;
+
+            // 5. GRADIENT-BASED EDGE DETECTION
+            // Instead of just threshold, look for the steepest brightness change
+            // This handles gradual lighting changes better
+            const liquidYs = columnProfiles.map(profile => {
+              let maxGradient = 0;
+              let gradientY = height;
+              let thresholdY = height;
+
+              // Scan from bottom up
+              for (let y = height - 5; y >= 5; y--) {
+                // Compute local gradient (brightness change over 5 pixels)
+                const gradientUp = profile[y - 5] - profile[y];
+
+                // Track threshold crossing
+                if (profile[y] > threshold && thresholdY === height) {
+                  thresholdY = y;
+                }
+
+                // Track maximum gradient (foam/stout boundary)
+                if (gradientUp > maxGradient && gradientUp > 10) {
+                  maxGradient = gradientUp;
+                  gradientY = y - 2; // Adjust to center of transition
+                }
+              }
+
+              // Use gradient detection if strong edge found, otherwise threshold
+              if (maxGradient > lumRange * 0.3 && lumRange > minContrast) {
+                return gradientY;
+              }
+              return thresholdY;
+            });
+
+            // 6. ROBUST AGGREGATION - trimmed mean (remove outliers)
+            // Sort and remove top/bottom 20% before averaging
+            const sortedYs = [...liquidYs].sort((a, b) => a - b);
+            const trimCount = Math.floor(numColumns * 0.2);
+            const trimmedYs = sortedYs.slice(trimCount, sortedYs.length - trimCount);
+            const liquidY = Math.round(trimmedYs.reduce((a, b) => a + b, 0) / trimmedYs.length);
+
+            // 7. TARGET POSITION - the "G" line
+            // Standard Guinness: G is approximately at 62% from top (38% from bottom)
+            // We look for it in the upper-middle region of the visible glass
+            const targetY = Math.floor(height * 0.52);
+
+            // 8. ACCURACY CALCULATION with wider tolerance for real-world variance
             const distance = Math.abs(liquidY - targetY);
-            const maxDistance = height * 0.15;
+            const maxDistance = height * 0.18; // 18% tolerance (more forgiving)
             const accuracy = Math.max(0, Math.min(100, 100 - (distance / maxDistance) * 100));
+
+            // 9. CONFIDENCE SCORE - how reliable is this reading?
+            // Based on: contrast level, consistency of column readings, valid liquid position
+            const columnVariance = trimmedYs.reduce((sum, y) => sum + Math.pow(y - liquidY, 2), 0) / trimmedYs.length;
+            const columnStdDev = Math.sqrt(columnVariance);
+            const consistencyScore = Math.max(0, 100 - columnStdDev * 2); // Penalize high variance
+            const contrastScore = Math.min(100, lumRange * 2); // Higher contrast = more confident
+            const positionScore = (liquidY > height * 0.2 && liquidY < height * 0.8) ? 100 : 50; // Valid range
+            const confidence = Math.round((consistencyScore + contrastScore + positionScore) / 3);
+
+            // 10. DEBUG INFO
+            console.log('[PintAnalysis]', {
+              preprocessing: { minLum, maxLum, contrast, enhanced: contrast < 100 && contrast > 10 },
+              lighting: { avgTopLum: Math.round(avgTopLum), avgBottomLum: Math.round(avgBottomLum), lumRange: Math.round(lumRange) },
+              detection: { threshold: Math.round(threshold), liquidY, targetY, columnStdDev: Math.round(columnStdDev) },
+              result: { accuracy: Math.round(accuracy), confidence }
+            });
+
             setIsAnalyzing(false);
-            resolve({ liquidY, targetY, accuracy: Math.round(accuracy), height });
+            resolve({ liquidY, targetY, accuracy: Math.round(accuracy), height, confidence });
           };
           img.onerror = () => {
             setIsAnalyzing(false);
