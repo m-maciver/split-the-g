@@ -1,4 +1,4 @@
-# Deploy Split the G - Beta Testing Guide
+# Deploy G SPLIT - Beta Testing Guide
 
 ## Option 1: Netlify Drop (Fastest - 2 minutes) ⚡
 

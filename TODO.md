@@ -1,4 +1,4 @@
-# Split the G - Next Session Todo List
+# G SPLIT - Next Session Todo List
 
 ## Done (from previous sessions)
 - [x] Irish Pub + Silicon Valley retheme (dark pub colors, gold/emerald/cream)

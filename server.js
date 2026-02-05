@@ -854,12 +854,12 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   if (IS_PRODUCTION) {
     logger.info({ event: 'server-started', port: PORT, mode: 'production' });
-    console.log(`Split the G server running on port ${PORT} (production)`);
+    console.log(`G SPLIT server running on port ${PORT} (production)`);
   } else {
     const url = `https://${localIP}:${PORT}`;
 
     console.log('\n========================================');
-    console.log('     SPLIT THE G - MULTIPLAYER 1v1     ');
+    console.log('       G SPLIT - MULTIPLAYER 1v1        ');
     console.log('========================================\n');
     console.log(`HTTPS Server running on port ${PORT}`);
     console.log(`HTTP redirect running on port ${HTTP_PORT}\n`);

@@ -1,4 +1,4 @@
-# Split the G - Marketing & Growth Plan
+# G SPLIT - Marketing & Growth Plan
 
 ## Phase 1: Pre-Launch (Get the Foundation Right)
 

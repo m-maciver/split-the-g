@@ -11,7 +11,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://split-the-g-production.up.railway.app/">
-  <meta property="og:title" content="Split the G — 1v1 Pub Challenge">
+  <meta property="og:title" content="G SPLIT — 1v1 Pub Challenge">
   <meta property="og:description" content="Think you can split the G? Challenge your mates to a 1v1 Guinness showdown. Snap, drink, prove it.">
   <meta property="og:image" content="https://split-the-g-production.up.railway.app/og-image.svg">
   <meta property="og:image:width" content="1200">
@@ -19,12 +19,12 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Split the G — 1v1 Pub Challenge">
+  <meta name="twitter:title" content="G SPLIT — 1v1 Pub Challenge">
   <meta name="twitter:description" content="Think you can split the G? Challenge your mates to a 1v1 Guinness showdown.">
   <meta name="twitter:image" content="https://split-the-g-production.up.railway.app/og-image.svg">
 
   <link rel="manifest" href="manifest.json">
-  <title>Split the G — 1v1 Pub Challenge</title>
+  <title>G SPLIT — 1v1 Pub Challenge</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -477,7 +477,7 @@
 <body>
   <div id="splash" style="position:fixed;inset:0;background:#0B1A0E;display:flex;align-items:center;justify-content:center;z-index:99999">
     <div style="text-align:center">
-      <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:900;color:#F5E6C8;letter-spacing:0.04em">SPLIT THE G</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:900;color:#F5E6C8;letter-spacing:0.04em">G SPLIT</div>
       <div style="width:48px;height:3px;background:#34D399;border-radius:2px;margin:12px auto 0"></div>
       <div style="margin-top:20px;display:flex;gap:6px;justify-content:center">
         <span class="sp-dot" style="animation-delay:0s"></span>
@@ -1170,12 +1170,78 @@
     function PintIcon() {
       return (
         <div className="pint-float">
-          <svg width="64" height="88" viewBox="0 0 120 160" style={{ display: 'block', margin: '0 auto' }}>
-            <path d="M30 20 L25 130 Q25 142 35 142 L85 142 Q95 142 95 130 L90 20 Q90 15 82 15 L38 15 Q30 15 30 20 Z"
-              fill="none" stroke="#D4A843" strokeWidth="2.5" strokeLinecap="round"/>
-            <path d="M31 90 L26 130 Q26 140 35 140 L85 140 Q94 140 94 130 L89 90 Z" fill="#1C0F00"/>
-            <ellipse cx="60" cy="90" rx="32" ry="10" fill="#F5E6C8" opacity="0.95"/>
-            <ellipse cx="60" cy="17" rx="22" ry="5" stroke="#D4A843" strokeWidth="1.5" fill="none"/>
+          <svg width="120" height="170" viewBox="0 0 120 170" style={{ display: 'block', margin: '0 auto' }}>
+            <defs>
+              <linearGradient id="stoutGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#1A0800" />
+                <stop offset="30%" stopColor="#2D0F00" />
+                <stop offset="60%" stopColor="#1C0A00" />
+                <stop offset="100%" stopColor="#0D0500" />
+              </linearGradient>
+              <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+              </linearGradient>
+              <linearGradient id="foamGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFF8EC" />
+                <stop offset="40%" stopColor="#F5E6C8" />
+                <stop offset="100%" stopColor="#E8D5A8" />
+              </linearGradient>
+              <linearGradient id="highlightGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+              <clipPath id="glassClip">
+                <path d="M32 28 L27 140 Q27 152 38 152 L82 152 Q93 152 93 140 L88 28 Z" />
+              </clipPath>
+            </defs>
+
+            {/* Glass outline */}
+            <path d="M32 28 L27 140 Q27 152 38 152 L82 152 Q93 152 93 140 L88 28 Q88 22 80 22 L40 22 Q32 22 32 28 Z"
+              fill="none" stroke="#D4A843" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+
+            {/* Glass body */}
+            <path d="M32 28 L27 140 Q27 152 38 152 L82 152 Q93 152 93 140 L88 28 Z"
+              fill="url(#glassGrad)" />
+
+            {/* Stout fill */}
+            <g clipPath="url(#glassClip)">
+              <rect x="25" y="62" width="70" height="95" fill="url(#stoutGrad)" />
+              <rect x="25" y="62" width="70" height="8" fill="#2A1200" opacity="0.5" />
+              <line x1="42" y1="70" x2="43" y2="145" stroke="rgba(60,25,0,0.3)" strokeWidth="0.5" />
+              <line x1="55" y1="68" x2="56" y2="148" stroke="rgba(60,25,0,0.2)" strokeWidth="0.5" />
+              <line x1="70" y1="72" x2="69" y2="146" stroke="rgba(60,25,0,0.3)" strokeWidth="0.5" />
+              <line x1="78" y1="69" x2="77" y2="144" stroke="rgba(60,25,0,0.2)" strokeWidth="0.5" />
+            </g>
+
+            {/* Foam head */}
+            <ellipse cx="60" cy="62" rx="30" ry="12" fill="url(#foamGrad)" />
+            <ellipse cx="60" cy="60" rx="28" ry="9" fill="#FFF8EC" opacity="0.6" />
+            <ellipse cx="55" cy="58" rx="18" ry="5" fill="#FFFDF5" opacity="0.3" />
+
+            {/* Foam bubbles */}
+            <circle cx="48" cy="60" r="2" fill="#FFFDF5" opacity="0.4" />
+            <circle cx="65" cy="59" r="1.5" fill="#FFFDF5" opacity="0.35" />
+            <circle cx="72" cy="62" r="1.8" fill="#FFFDF5" opacity="0.3" />
+            <circle cx="52" cy="57" r="1" fill="#FFFDF5" opacity="0.5" />
+
+            {/* Glass rim */}
+            <ellipse cx="60" cy="24" rx="25" ry="5" stroke="#D4A843" strokeWidth="1" fill="none" opacity="0.5" />
+
+            {/* Glass reflections */}
+            <path d="M35 30 L31 130 Q34 30 35 30 Z" fill="url(#highlightGrad)" opacity="0.4" />
+            <path d="M86 35 L84 90 Q87 35 86 35 Z" fill="rgba(255,255,255,0.12)" />
+
+            {/* Condensation */}
+            <circle cx="38" cy="95" r="1.2" fill="rgba(255,255,255,0.15)" />
+            <circle cx="82" cy="105" r="1" fill="rgba(255,255,255,0.12)" />
+            <circle cx="36" cy="115" r="0.8" fill="rgba(255,255,255,0.1)" />
+            <circle cx="84" cy="85" r="1.1" fill="rgba(255,255,255,0.13)" />
+            <circle cx="40" cy="130" r="0.9" fill="rgba(255,255,255,0.11)" />
+
+            {/* Base shadow */}
+            <ellipse cx="60" cy="155" rx="22" ry="3" fill="rgba(0,0,0,0.2)" />
           </svg>
         </div>
       );
@@ -1245,7 +1311,7 @@
             <path d="M12 18h.01"/>
           </svg>
           <p style={{ color: 'var(--cream)', fontSize: 18, fontWeight: 700 }}>Please rotate your device</p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Split the G works best in portrait mode</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>G SPLIT works best in portrait mode</p>
         </div>
       );
     }
@@ -1271,11 +1337,11 @@
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <PintIcon />
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.04em', color: 'var(--cream)', textAlign: 'center' }}>
-              SPLIT THE G
+            <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--cream)', textAlign: 'center' }}>
+              <span style={{ fontSize: 44, color: 'var(--gold)', fontWeight: 900 }}>G</span>{' '}SPLIT
             </h1>
             <div style={{ width: 48, height: 3, background: 'var(--emerald)', borderRadius: 2, margin: '4px auto 0' }} />
-            <p style={{ textAlign: 'center', color: 'var(--gold)', fontSize: 14, fontWeight: 600, letterSpacing: '0.05em', marginTop: 8 }}>The Guinness Challenge</p>
+            <p style={{ textAlign: 'center', color: 'var(--gold)', fontSize: 15, fontWeight: 500, letterSpacing: '0.06em', marginTop: 8, fontStyle: 'italic' }}>Sláinte</p>
 
             {hasPlayed && (
               <div style={{
@@ -1421,7 +1487,7 @@
                 </svg>
                 <p className="t-title" style={{ color: 'var(--cream)', marginBottom: 4 }}>Camera Access Required</p>
                 <p className="t-small" style={{ lineHeight: 1.5 }}>
-                  Split the G needs your camera to photograph your pint.
+                  G SPLIT needs your camera to photograph your pint.
                   Please allow camera access in your browser settings.
                 </p>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-elevated)', padding: '10px 14px', borderRadius: 10, lineHeight: 1.6, textAlign: 'left', width: '100%' }}>
@@ -1474,9 +1540,23 @@
       );
     }
 
-    function SearchingScreen({ onCancel, onSolo, pintThumbnail }) {
+    function SearchingScreen({ onCancel, onSolo }) {
       const [countdown, setCountdown] = useState(30);
       const [timedOut, setTimedOut] = useState(false);
+
+      // Pre-request camera permission so it's ready for capture-result
+      useEffect(() => {
+        let stream = null;
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        }).then(s => {
+          stream = s;
+          s.getTracks().forEach(t => t.stop());
+        }).catch(() => {});
+        return () => {
+          if (stream) stream.getTracks().forEach(t => t.stop());
+        };
+      }, []);
 
       useEffect(() => {
         const interval = setInterval(() => {
@@ -1507,11 +1587,6 @@
           style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
         >
           <div className="layout" style={{ textAlign: 'center' }}>
-            {pintThumbnail && (
-              <div style={{ marginBottom: 32 }}>
-                <img src={pintThumbnail} alt="Your pint" style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'cover', border: '1px solid rgba(212,168,67,0.3)', boxShadow: '0 0 8px rgba(212,168,67,0.15)' }} />
-              </div>
-            )}
             <div style={{ marginBottom: 24 }}>
               <SearchRing />
             </div>
@@ -1985,9 +2060,9 @@
 
       const handleShare = useCallback(async () => {
         const text = isWinner
-          ? `I won Split the G with ${myResult.accuracy}% accuracy! (${rank.name} rank)`
-          : `I scored ${myResult.accuracy}% on Split the G! (${rank.name} rank)`;
-        try { await navigator.share({ title: 'Split the G', text }); } catch (e) {}
+          ? `I won G SPLIT with ${myResult.accuracy}% accuracy! (${rank.name} rank)`
+          : `I scored ${myResult.accuracy}% on G SPLIT! (${rank.name} rank)`;
+        try { await navigator.share({ title: 'G SPLIT', text }); } catch (e) {}
       }, [isWinner, myResult, rank]);
 
       return (
@@ -2256,8 +2331,8 @@
       }, [phase]);
 
       const handleShare = useCallback(async () => {
-        const text = `I scored ${accuracy}% on Split the G! (${rank.name} rank)`;
-        try { await navigator.share({ title: 'Split the G', text }); } catch (e) {}
+        const text = `I scored ${accuracy}% on G SPLIT! (${rank.name} rank)`;
+        try { await navigator.share({ title: 'G SPLIT', text }); } catch (e) {}
       }, [accuracy, rank]);
 
       const tierLabel = accuracy >= 97 ? 'GUINNESS GOD' : accuracy >= 80 ? 'Excellent' : accuracy >= 50 ? 'Decent Split' : accuracy >= 25 ? 'Needs Work' : 'Shocking';
@@ -2376,7 +2451,6 @@
       myReady: false,
       opponentReady: false,
       gameStartTime: null,
-      pintImage: null,
       opponentPintImage: null,
       myResult: null,
       opponentSubmitted: false,
@@ -2416,13 +2490,11 @@
         case 'REVEAL_START':
           return { ...state, revealData: action.data, seriesData: action.data.series || null, screen: 'reveal' };
         case 'NEXT_ROUND':
-          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, capturedResultImage: null, isScanning: false, pintImage: null, timeoutEnd: null, isRematch: true, screen: 'countdown', gameStartTime: action.countdownStart };
+          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, capturedResultImage: null, isScanning: false, timeoutEnd: null, isRematch: true, screen: 'countdown', gameStartTime: action.countdownStart };
         case 'SET_SOLO_MODE':
           return { ...state, soloMode: true, gameStartTime: action.gameStartTime, screen: 'countdown' };
         case 'SET_MY_RESULT':
           return { ...state, myResult: action.result };
-        case 'SET_PINT_IMAGE':
-          return { ...state, pintImage: action.image };
         case 'SET_CAPTURED_RESULT':
           return { ...state, capturedResultImage: action.image, isScanning: action.isScanning !== undefined ? action.isScanning : state.isScanning };
         case 'SET_SCANNING':
@@ -2430,11 +2502,11 @@
         case 'SET_REMATCH_STATE':
           return { ...state, rematchRequested: action.requested !== undefined ? action.requested : state.rematchRequested, rematchPending: action.pending !== undefined ? action.pending : state.rematchPending };
         case 'REMATCH_ACCEPTED':
-          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, rematchRequested: false, rematchPending: false, capturedResultImage: null, isScanning: false, pintImage: null, timeoutEnd: null, isRematch: true, soloFallback: false, screen: 'capture-pint' };
+          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, rematchRequested: false, rematchPending: false, capturedResultImage: null, isScanning: false, timeoutEnd: null, isRematch: true, soloFallback: false, screen: 'ready' };
         case 'LEAVE_ROOM':
           return { ...initialGameState };
         case 'SOLO_HOME':
-          return { ...state, soloMode: false, myResult: null, capturedResultImage: null, isScanning: false, pintImage: null, timeoutEnd: null, screen: 'landing' };
+          return { ...state, soloMode: false, myResult: null, capturedResultImage: null, isScanning: false, timeoutEnd: null, screen: 'landing' };
         case 'SOLO_PLAY_AGAIN':
           return { ...state, myResult: null, capturedResultImage: null, isScanning: false, gameStartTime: action.gameStartTime, screen: 'countdown' };
         case 'SET_SOLO_CONTINUE':
@@ -2506,7 +2578,7 @@
 
       // Clean up WebRTC on rematch
       useEffect(() => {
-        if (g.screen === 'capture-pint' && g.isRematch) {
+        if (g.screen === 'ready' && g.isRematch) {
           webrtc.cleanup();
         }
       }, [g.screen, g.isRematch]);
@@ -2640,7 +2712,10 @@
       }, [g.screen, socket, g.opponentId]);
 
       // ---- Handlers ----
-      const handleGetStarted = () => dispatch({ type: 'SET_SCREEN', screen: 'capture-pint' });
+      const handleGetStarted = () => {
+        dispatch({ type: 'SET_SCREEN', screen: 'searching' });
+        if (socket) socket.emit('join-queue', { nickname: nickname || 'Anon', mode: preferredMode });
+      };
 
       const handleQuickPlay = () => {
         dispatch({ type: 'SET_SCREEN', screen: 'searching' });
@@ -2653,19 +2728,8 @@
         showToast('Solo mode activated', 'info');
       }, [socket, showToast]);
 
-      const handlePintCaptured = async (img) => {
-        dispatch({ type: 'SET_PINT_IMAGE', image: img });
-        dispatch({ type: 'SET_SCREEN', screen: 'searching' });
-        const compressed = await compressImage(img);
-        if (socket) {
-          socket.emit('submit-pint-image', { image: compressed });
-          socket.emit('join-queue', { nickname: nickname || 'Anon', mode: preferredMode });
-        }
-      };
-
       const handleCancelSearch = () => {
         if (socket) socket.emit('leave-queue');
-        dispatch({ type: 'SET_PINT_IMAGE', image: null });
         dispatch({ type: 'SET_SCREEN', screen: 'landing' });
       };
 
@@ -2726,7 +2790,8 @@
       const handleNewOpponent = () => {
         handleLeaveRoom();
         setTimeout(() => {
-          dispatch({ type: 'SET_SCREEN', screen: 'capture-pint' });
+          dispatch({ type: 'SET_SCREEN', screen: 'searching' });
+          if (socket) socket.emit('join-queue', { nickname: nickname || 'Anon', mode: preferredMode });
         }, 100);
       };
 
@@ -2751,12 +2816,8 @@
                 nickname={nickname} onSetNickname={setNickname} leaderboardEntries={leaderboard.entries} />
             )}
 
-            {g.screen === 'capture-pint' && (
-              <CaptureScreen key="capture-pint" mode="full-pint" onCapture={handlePintCaptured} onCancel={() => dispatch({ type: 'SET_SCREEN', screen: 'landing' })} />
-            )}
-
             {g.screen === 'searching' && (
-              <SearchingScreen key="searching" onCancel={handleCancelSearch} onSolo={handleSoloMode} pintThumbnail={g.pintImage} />
+              <SearchingScreen key="searching" onCancel={handleCancelSearch} onSolo={handleSoloMode} />
             )}
 
             {g.screen === 'matched' && (
