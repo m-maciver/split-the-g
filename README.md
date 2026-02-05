@@ -1,4 +1,4 @@
-# G SPLIT
+# SPLI IT
 
 A 1v1 competitive Guinness challenge where players race to drink a pint and stop the liquid level exactly at the 'G' logo with the best accuracy.
 

@@ -1,8 +1,8 @@
-# G SPLIT - Production Guide
+# SPLI IT - Production Guide
 
 ## What's New: 1v1 Multiplayer with Stats
 
-The **multiplayer production version** of G SPLIT — 1v1 competitive Guinness challenge with player stats, ranks, and streak tracking.
+The **multiplayer production version** of SPLI IT — 1v1 competitive Guinness challenge with player stats, ranks, and streak tracking.
 
 ---
 

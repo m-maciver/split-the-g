@@ -1,7 +1,7 @@
 {
   "name": "g-split",
   "version": "2.0.0",
-  "description": "G SPLIT - Multiplayer 1v1 competitive Guinness challenge",
+  "description": "SPLI IT - Multiplayer 1v1 competitive Guinness challenge",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,4 +1,4 @@
-# G SPLIT - Marketing & Growth Plan
+# SPLI IT - Marketing & Growth Plan
 
 ## Phase 1: Pre-Launch (Get the Foundation Right)
 
