@@ -1,7 +1,7 @@
 {
-  "name": "SPLI IT - Sláinte",
-  "short_name": "SPLI IT",
-  "description": "SPLI IT - 1v1 competitive Guinness pint splitting challenge",
+  "name": "SPLIT IT - Sláinte",
+  "short_name": "SPLIT IT",
+  "description": "SPLIT IT - 1v1 competitive Guinness pint splitting challenge",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B1A0E",

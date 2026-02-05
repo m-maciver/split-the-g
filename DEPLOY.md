@@ -1,4 +1,4 @@
-# Deploy SPLI IT - Beta Testing Guide
+# Deploy SPLIT IT - Beta Testing Guide
 
 ## Option 1: Netlify Drop (Fastest - 2 minutes) ⚡
 
