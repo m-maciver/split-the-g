@@ -2043,7 +2043,25 @@
       );
     }
 
-    function ReadyScreen({ localStream, remoteStream, myReady, opponentReady, onReady, isMuted, onToggleMute }) {
+    function ReadyScreen({ localStream, remoteStream, myReady, opponentReady, onReady, isMuted, onToggleMute, autoStartTime }) {
+      // Auto-start countdown (30 seconds from when ready screen loads)
+      const [countdown, setCountdown] = useState(30);
+
+      useEffect(() => {
+        if (!autoStartTime) return;
+
+        const tick = () => {
+          const remaining = Math.max(0, Math.ceil((autoStartTime - Date.now()) / 1000));
+          setCountdown(remaining);
+        };
+
+        tick(); // Initial
+        const interval = setInterval(tick, 500);
+        return () => clearInterval(interval);
+      }, [autoStartTime]);
+
+      const bothReady = myReady && opponentReady;
+
       return (
         <motion.div
           key="ready"
@@ -2054,25 +2072,45 @@
           style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
           className="safe-top safe-bottom"
         >
+          {/* Header with auto-start countdown */}
+          <div style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid var(--bg-surface)' }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: 4 }}>
+              {bothReady ? 'STARTING...' : 'WAITING FOR PLAYERS'}
+            </p>
+            {!bothReady && countdown > 0 && (
+              <p style={{ fontSize: 14, fontWeight: 700, color: countdown <= 10 ? 'var(--gold)' : 'var(--text-secondary)', fontFamily: "'Space Mono', monospace" }}>
+                Auto-start in {countdown}s
+              </p>
+            )}
+          </div>
+
           <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gap: 8, padding: '8px 8px 0' }}>
+            {/* Opponent video */}
             <div className="video-container" style={{ position: 'relative' }}>
               {remoteStream ? <VideoFeed stream={remoteStream} mirrored /> : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
                   <PulsingDots light />
                 </div>
               )}
+              <div style={{ position: 'absolute', top: 12, left: 12, fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+                OPPONENT
+              </div>
               <div style={{ position: 'absolute', top: 12, right: 12 }}>
                 <div className={`ready-badge ${opponentReady ? 'ready-badge-on' : 'ready-badge-off'}`}>
                   {opponentReady ? 'READY' : '...'}
                 </div>
               </div>
             </div>
+            {/* Local video */}
             <div className="video-container" style={{ position: 'relative' }}>
               {localStream ? <VideoFeed stream={localStream} muted mirrored /> : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
                   <PulsingDots light />
                 </div>
               )}
+              <div style={{ position: 'absolute', top: 12, left: 12, fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+                YOU
+              </div>
               <div style={{ position: 'absolute', top: 12, right: 12 }}>
                 <div className={`ready-badge ${myReady ? 'ready-badge-on' : 'ready-badge-off'}`}>
                   {myReady ? 'READY' : '...'}
@@ -2083,9 +2121,13 @@
           </div>
           <div style={{ padding: '16px 24px' }}>
             {!myReady ? (
-              <button className="btn-success" onClick={() => { haptic(30); onReady(); }}>Ready Up</button>
+              <button className="btn-success" onClick={() => { haptic(30); onReady(); }}>
+                Ready Up
+              </button>
             ) : (
-              <button className="btn-primary-light" disabled>Waiting for opponent...</button>
+              <button className="btn-primary-light" disabled>
+                {opponentReady ? 'Starting...' : 'Waiting for opponent...'}
+              </button>
             )}
           </div>
         </motion.div>
@@ -2888,6 +2930,7 @@
       isRematch: false,
       seriesMode: 'single',
       seriesData: null,
+      autoStartTime: null,
     };
 
     function gameReducer(state, action) {
@@ -2895,7 +2938,7 @@
         case 'SET_SCREEN':
           return { ...state, screen: action.screen };
         case 'MATCHED':
-          return { ...state, roomId: action.roomId, playerId: action.playerId, opponentId: action.opponentId, opponentName: action.opponentName || null, isInitiator: action.isInitiator, opponentPintImage: action.opponentPintImage || null, seriesMode: action.mode || 'single', screen: 'matched' };
+          return { ...state, roomId: action.roomId, playerId: action.playerId, opponentId: action.opponentId, opponentName: action.opponentName || null, isInitiator: action.isInitiator, opponentPintImage: action.opponentPintImage || null, seriesMode: action.mode || 'single', autoStartTime: action.autoStartTime || null, screen: 'matched' };
         case 'UPDATE_PLAYER_ID':
           return { ...state, playerId: action.playerId };
         case 'SET_SERIES_MODE':
@@ -2925,7 +2968,7 @@
         case 'SET_REMATCH_STATE':
           return { ...state, rematchRequested: action.requested !== undefined ? action.requested : state.rematchRequested, rematchPending: action.pending !== undefined ? action.pending : state.rematchPending };
         case 'REMATCH_ACCEPTED':
-          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, rematchRequested: false, rematchPending: false, capturedResultImage: null, isScanning: false, timeoutEnd: null, isRematch: true, soloFallback: false, screen: 'ready' };
+          return { ...state, myReady: false, opponentReady: false, myResult: null, opponentSubmitted: false, revealData: null, rematchRequested: false, rematchPending: false, capturedResultImage: null, isScanning: false, timeoutEnd: null, isRematch: true, soloFallback: false, autoStartTime: action.autoStartTime || null, screen: 'ready' };
         case 'LEAVE_ROOM':
           return { ...initialGameState };
         case 'SOLO_HOME':
@@ -3017,7 +3060,7 @@
         if (!socket) return;
 
         const onMatched = (data) => {
-          dispatch({ type: 'MATCHED', roomId: data.roomId, playerId: data.playerId, opponentId: data.opponentId, opponentName: data.opponentName, isInitiator: data.isInitiator, opponentPintImage: data.opponentPintImage, mode: data.mode });
+          dispatch({ type: 'MATCHED', roomId: data.roomId, playerId: data.playerId, opponentId: data.opponentId, opponentName: data.opponentName, isInitiator: data.isInitiator, opponentPintImage: data.opponentPintImage, mode: data.mode, autoStartTime: data.autoStartTime });
         };
 
         const onReadyUpdate = (data) => {
@@ -3063,8 +3106,8 @@
 
         const onRematchRequested = () => dispatch({ type: 'SET_REMATCH_STATE', pending: true });
 
-        const onRematchAccepted = () => {
-          dispatch({ type: 'REMATCH_ACCEPTED' });
+        const onRematchAccepted = (data) => {
+          dispatch({ type: 'REMATCH_ACCEPTED', autoStartTime: data && data.autoStartTime });
         };
 
         const onRematchDeclined = () => {
@@ -3264,7 +3307,8 @@
                 opponentReady={g.opponentReady}
                 onReady={handleReady}
                 isMuted={webrtc.isMuted}
-                onToggleMute={webrtc.toggleMute} />
+                onToggleMute={webrtc.toggleMute}
+                autoStartTime={g.autoStartTime} />
             )}
 
             {g.screen === 'countdown' && (

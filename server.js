@@ -155,6 +155,7 @@ function createRoom(player1, player2) {
   // Negotiate mode: both must want best-of-3
   const mode = (player1.preferredMode === 'best-of-3' && player2.preferredMode === 'best-of-3')
     ? 'best-of-3' : 'single';
+  const autoStartTime = Date.now() + 30000; // 30 seconds from match creation
   const room = {
     id: roomId,
     players: [player1.id, player2.id],
@@ -180,6 +181,8 @@ function createRoom(player1, player2) {
       [player2.id]: { submitted: false, image: null, accuracy: null }
     },
     resultTimeout: null,
+    autoStartTime,
+    autoStartTimeout: null,
     createdAt: Date.now()
   };
 
@@ -227,6 +230,12 @@ function cleanupRoom(roomId) {
   if (room.resultTimeout) {
     clearTimeout(room.resultTimeout);
     room.resultTimeout = null;
+  }
+
+  // Cancel auto-start timeout
+  if (room.autoStartTimeout) {
+    clearTimeout(room.autoStartTimeout);
+    room.autoStartTimeout = null;
   }
 
   // Cancel any pending disconnect grace-period timeouts
@@ -354,7 +363,7 @@ io.on('connection', (socket) => {
 
       logger.info({ event: 'match-created', roomId: room.id, player1: player1.id, player2: player2.id });
 
-      // Notify both players (include opponent's pint image, name, and mode)
+      // Notify both players (include opponent's pint image, name, mode, and auto-start time)
       player1.emit('matched', {
         roomId: room.id,
         playerId: player1.id,
@@ -362,7 +371,8 @@ io.on('connection', (socket) => {
         isInitiator: true,
         opponentPintImage: room.pintImages[player2.id] || null,
         opponentName: room.playerNames[player2.id],
-        mode: room.mode
+        mode: room.mode,
+        autoStartTime: room.autoStartTime
       });
 
       player2.emit('matched', {
@@ -372,8 +382,26 @@ io.on('connection', (socket) => {
         isInitiator: false,
         opponentPintImage: room.pintImages[player1.id] || null,
         opponentName: room.playerNames[player1.id],
-        mode: room.mode
+        mode: room.mode,
+        autoStartTime: room.autoStartTime
       });
+
+      // Set up auto-start timeout (30 seconds)
+      room.autoStartTimeout = setTimeout(() => {
+        // Check if game hasn't already started
+        if (room.state !== 'matched' && room.state !== 'ready') return;
+
+        // Auto-start the game
+        room.state = 'countdown';
+        room.countdownStart = Date.now() + 3000; // 3 second pre-countdown
+
+        logger.info({ event: 'auto-start', roomId: room.id });
+
+        io.to(room.id).emit('game-start', {
+          countdownStart: room.countdownStart,
+          duration: 20000 // 20 seconds
+        });
+      }, 30000);
     }
   });
 
@@ -462,6 +490,12 @@ io.on('connection', (socket) => {
     // Check if both players are ready
     const allReady = room.players.every(id => room.readyState[id]);
     if (allReady) {
+      // Clear auto-start timeout since both players manually readied
+      if (room.autoStartTimeout) {
+        clearTimeout(room.autoStartTimeout);
+        room.autoStartTimeout = null;
+      }
+
       room.state = 'countdown';
       room.countdownStart = Date.now() + 3000; // 3 second pre-countdown
 
@@ -637,8 +671,14 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id);
     if (!room) return;
 
+    // Clear any existing auto-start timeout
+    if (room.autoStartTimeout) {
+      clearTimeout(room.autoStartTimeout);
+      room.autoStartTimeout = null;
+    }
+
     // Reset room state
-    room.state = 'matched';
+    room.state = 'ready';
     room.readyState = {
       [room.players[0]]: false,
       [room.players[1]]: false
@@ -657,8 +697,26 @@ io.on('connection', (socket) => {
       [room.players[1]]: { submitted: false, image: null, accuracy: null }
     };
 
+    // Set new auto-start time (30 seconds from now)
+    room.autoStartTime = Date.now() + 30000;
+
     const roomId = playerRooms.get(socket.id);
-    io.to(roomId).emit('rematch-accepted');
+    io.to(roomId).emit('rematch-accepted', { autoStartTime: room.autoStartTime });
+
+    // Set up new auto-start timeout
+    room.autoStartTimeout = setTimeout(() => {
+      if (room.state !== 'ready') return;
+
+      room.state = 'countdown';
+      room.countdownStart = Date.now() + 3000;
+
+      logger.info({ event: 'rematch-auto-start', roomId: room.id });
+
+      io.to(room.id).emit('game-start', {
+        countdownStart: room.countdownStart,
+        duration: 20000
+      });
+    }, 30000);
   });
 
   /**
