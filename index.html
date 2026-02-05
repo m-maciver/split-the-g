@@ -1334,8 +1334,14 @@
         >
           <AmbientParticles />
           <div className="layout" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <PintIcon />
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div className="pint-float">
+                <img src="guinness-cheers.png" alt="Guinness Cheers" style={{
+                  width: 180, height: 'auto', display: 'block', margin: '0 auto',
+                  WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)',
+                  maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)'
+                }} />
+              </div>
             </div>
             <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--cream)', textAlign: 'center' }}>
               <span style={{ fontSize: 44, color: 'var(--gold)', fontWeight: 900 }}>G</span>{' '}SPLIT
@@ -1392,28 +1398,8 @@
               <LeaderboardCard entries={leaderboardEntries} />
             )}
 
-            <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 12 }}>
-              <button
-                className={seriesMode === 'single' ? 'btn-primary' : 'btn-text'}
-                style={{ flex: 1, height: 44, border: seriesMode !== 'single' ? '1px solid var(--border)' : 'none' }}
-                onClick={() => onSetSeriesMode('single')}>
-                Single
-              </button>
-              <button
-                className={seriesMode === 'best-of-3' ? 'btn-primary' : 'btn-text'}
-                style={{ flex: 1, height: 44, border: seriesMode !== 'best-of-3' ? '1px solid var(--border)' : 'none' }}
-                onClick={() => onSetSeriesMode('best-of-3')}>
-                Best of 3
-              </button>
-            </div>
-
             <div style={{ height: hasPlayed ? 16 : 32 }} />
             <button className="btn-primary" onClick={onStart}>Get Started</button>
-            {hasPlayed && (
-              <button className="btn-text" style={{ color: 'var(--emerald)', marginTop: 8, fontSize: 14, fontWeight: 600 }} onClick={onQuickPlay}>
-                Quick Play — Skip Photo
-              </button>
-            )}
           </div>
         </motion.div>
       );
