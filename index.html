@@ -996,9 +996,9 @@
       const color = progress > 0.33 ? '#34D399' : progress > 0.17 ? '#D4A843' : '#EF4444';
 
       return (
-        <svg width="160" height="160" viewBox="0 0 128 128"
+        <svg width="200" height="200" viewBox="0 0 128 128"
           style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }}>
-          <circle cx="64" cy="64" r={radius} fill="none" stroke="rgba(52,211,153,0.08)" strokeWidth="2.5" />
+          <circle cx="64" cy="64" r={radius} fill="none" stroke="rgba(52,211,153,0.08)" strokeWidth="2" />
           <circle cx="64" cy="64" r={radius} fill="none"
             stroke={color}
             strokeWidth="2.5"
@@ -1102,7 +1102,7 @@
 
     function MuteButton({ isMuted, onToggle }) {
       return (
-        <button className={`mute-btn ${isMuted ? 'mute-btn-active' : ''}`} onClick={onToggle} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+        <button className={`mute-btn ${isMuted ? 'mute-btn-active' : ''}`} onClick={() => { haptic(20); onToggle(); }} aria-label={isMuted ? 'Unmute' : 'Mute'}>
           {isMuted ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
@@ -1399,7 +1399,7 @@
             )}
 
             <div style={{ height: hasPlayed ? 16 : 32 }} />
-            <button className="btn-primary" onClick={onStart}>Get Started</button>
+            <button className="btn-primary" onClick={() => { haptic(30); onStart(); }}>Get Started</button>
           </div>
         </motion.div>
       );
@@ -1480,8 +1480,8 @@
                   <strong style={{ color: 'var(--cream)' }}>iOS:</strong> Settings &gt; Safari &gt; Camera &gt; Allow<br/>
                   <strong style={{ color: 'var(--cream)' }}>Android:</strong> Tap the lock icon in the address bar
                 </div>
-                <button className="btn-primary" style={{ width: 200 }} onClick={() => camera.start()}>Try Again</button>
-                {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={onCancel}>Go Back</button>}
+                <button className="btn-primary" style={{ width: 200 }} onClick={() => { haptic(20); camera.start(); }}>Try Again</button>
+                {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={() => { haptic(20); onCancel(); }}>Go Back</button>}
               </div>
             </div>
           ) : (
@@ -1517,7 +1517,7 @@
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5 }} className="safe-bottom">
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '0 24px 16px' }}>
                   <ShutterButton onClick={handleShutter} disabled={!ready} />
-                  {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={onCancel}>Cancel</button>}
+                  {onCancel && <button className="btn-text" style={{ color: 'var(--text-secondary)' }} onClick={() => { haptic(20); onCancel(); }}>Cancel</button>}
                 </div>
               </div>
             </>
@@ -1584,8 +1584,8 @@
               {countdown > 0 && `Solo mode in ${countdown}s`}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-              <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={onSolo}>Play Solo Now</button>
-              <button className="btn-text" onClick={onCancel}>Cancel</button>
+              <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={() => { haptic(30); onSolo(); }}>Play Solo Now</button>
+              <button className="btn-text" onClick={() => { haptic(20); onCancel(); }}>Cancel</button>
             </div>
           </div>
         </motion.div>
@@ -1666,9 +1666,9 @@
                   {connectionPhase === 'failed' || connectionPhase === 'camera-error' ? (
                     <>
                       <p style={{ color: 'var(--accent-red)', fontSize: 14, fontWeight: 600 }}>{statusMessage}</p>
-                      <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={() => { setAutoRetries(0); setTimedOut(false); onRetryWebRTC(); }}>Retry Connection</button>
+                      <button className="btn-text" style={{ color: 'var(--emerald)' }} onClick={() => { haptic(20); setAutoRetries(0); setTimedOut(false); onRetryWebRTC(); }}>Retry Connection</button>
                       {connectionPhase === 'failed' && (
-                        <button className="btn-text" style={{ color: 'var(--text-secondary)', fontSize: 12 }} onClick={onReady}>Continue Without Video</button>
+                        <button className="btn-text" style={{ color: 'var(--text-secondary)', fontSize: 12 }} onClick={() => { haptic(20); onReady(); }}>Continue Without Video</button>
                       )}
                     </>
                   ) : (
@@ -1695,7 +1695,7 @@
             </div>
           </div>
           <div style={{ padding: '16px 24px' }}>
-            <button className="btn-primary-light" onClick={onReady} disabled={!localStream}>
+            <button className="btn-primary-light" onClick={() => { haptic(30); onReady(); }} disabled={!localStream}>
               {localStream ? 'Continue' : 'Starting camera...'}
             </button>
           </div>
@@ -1755,7 +1755,7 @@
     function CountdownScreen({ gameStartTime, remoteStream, onDone, soloMode, soloFallback, isMuted, onToggleMute }) {
       const [phase, setPhase] = useState('pre'); // 'pre' | 'timer'
       const [preNum, setPreNum] = useState(3);
-      const [timer, setTimer] = useState(30);
+      const [timer, setTimer] = useState(20);
       const [showGo, setShowGo] = useState(false);
       const [flash, setFlash] = useState(false);
       const rafRef = useRef(null);
@@ -1791,7 +1791,7 @@
           timerStartRef.current = performance.now();
           const tick = (now) => {
             const elapsed = (now - timerStartRef.current) / 1000;
-            const remaining = Math.max(0, +(30 - elapsed).toFixed(1));
+            const remaining = Math.max(0, +(20 - elapsed).toFixed(1));
             setTimer(remaining);
             if (remaining > 0) {
               rafRef.current = requestAnimationFrame(tick);
@@ -1809,7 +1809,7 @@
       // Haptic + sound at timer thresholds
       const timerInt = Math.floor(timer);
       useEffect(() => {
-        if (phase !== 'timer' || timer >= 30) return;
+        if (phase !== 'timer' || timer >= 20) return;
         if (timerInt === 10) {
           haptic(30);
           sfx.tick();
@@ -1887,9 +1887,9 @@
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <p className="t-label" style={{ marginBottom: 16 }}>TIME REMAINING</p>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TimerArc progress={timer / 30} />
-              <div className={`t-hero ${isLow ? 'timer-pulse' : ''}`} style={{ color: isCritical ? 'var(--accent-red)' : 'var(--cream)', position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 200, height: 200 }}>
+              <TimerArc progress={timer / 20} />
+              <div className={`t-hero ${isLow ? 'timer-pulse' : ''}`} style={{ fontSize: 48, color: isCritical ? 'var(--accent-red)' : 'var(--cream)', position: 'relative', zIndex: 1 }}>
                 {timer.toFixed(1)}
               </div>
             </div>
@@ -2242,11 +2242,11 @@
                 {seriesData && !seriesData.seriesOver ? (
                   /* Best-of-3 series in progress — show Next Round */
                   <>
-                    <button className="btn-success" onClick={onNextRound}
+                    <button className="btn-success" onClick={() => { haptic(30); onNextRound(); }}
                       style={{ fontSize: 16, fontWeight: 700, padding: '14px 0' }}>
                       Next Round
                     </button>
-                    <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={onNewOpponent}>
+                    <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={() => { haptic(20); onNewOpponent(); }}>
                       Forfeit Series
                     </button>
                   </>
@@ -2254,8 +2254,8 @@
                   <div className="card-dark" style={{ textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 12 }}>Opponent wants a rematch!</p>
                     <div style={{ display: 'flex', gap: 12 }}>
-                      <button className="btn-success" style={{ flex: 1 }} onClick={onAcceptRematch}>Accept</button>
-                      <button className="btn-primary-light" style={{ flex: 1 }} onClick={onDeclineRematch}>Decline</button>
+                      <button className="btn-success" style={{ flex: 1 }} onClick={() => { haptic([50, 30, 50]); onAcceptRematch(); }}>Accept</button>
+                      <button className="btn-primary-light" style={{ flex: 1 }} onClick={() => { haptic(20); onDeclineRematch(); }}>Decline</button>
                     </div>
                   </div>
                 ) : (
@@ -2266,18 +2266,18 @@
                         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold)', marginTop: 8 }}>Rematch requested</p>
                         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Waiting for opponent to respond...</p>
                         <button className="btn-text" style={{ color: 'var(--text-secondary)', marginTop: 12 }}
-                          onClick={onCancelRematch}>
+                          onClick={() => { haptic(20); onCancelRematch(); }}>
                           Cancel
                         </button>
                       </div>
                     ) : (
-                      <button className="btn-primary-light" onClick={onRematch}>Rematch</button>
+                      <button className="btn-primary-light" onClick={() => { haptic(30); onRematch(); }}>Rematch</button>
                     )}
-                    <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={onNewOpponent}>
+                    <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={() => { haptic(20); onNewOpponent(); }}>
                       New Opponent
                     </button>
                     {typeof navigator.share === 'function' && (
-                      <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={handleShare}>
+                      <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={() => { haptic(20); handleShare(); }}>
                         Share Result
                       </button>
                     )}
@@ -2413,10 +2413,10 @@
             {phase >= 3 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={springConfig}
                 style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-                <button className="btn-primary" onClick={onPlayAgain}>Play Again</button>
-                <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={onHome}>Home</button>
+                <button className="btn-primary" onClick={() => { haptic(30); onPlayAgain(); }}>Play Again</button>
+                <button className="btn-text" style={{ color: 'var(--text-secondary)', textAlign: 'center' }} onClick={() => { haptic(20); onHome(); }}>Home</button>
                 {typeof navigator.share === 'function' && (
-                  <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={handleShare}>Share Result</button>
+                  <button className="btn-text" style={{ color: 'var(--gold)', textAlign: 'center' }} onClick={() => { haptic(20); handleShare(); }}>Share Result</button>
                 )}
               </motion.div>
             )}

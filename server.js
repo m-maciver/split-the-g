@@ -467,7 +467,7 @@ io.on('connection', (socket) => {
 
       io.to(roomId).emit('game-start', {
         countdownStart: room.countdownStart,
-        duration: 30000 // 30 seconds
+        duration: 20000 // 20 seconds
       });
     }
   });
@@ -697,7 +697,7 @@ io.on('connection', (socket) => {
       const roomId = playerRooms.get(socket.id);
       io.to(roomId).emit('game-start', {
         countdownStart: room.countdownStart,
-        duration: 30000
+        duration: 20000
       });
     } else {
       // Notify the other player
